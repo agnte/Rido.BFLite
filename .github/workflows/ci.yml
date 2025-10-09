@@ -19,10 +19,10 @@ jobs:
         dotnet-version: '9.0.x'
     
     - name: Restore dependencies
-      run: dotnet restore Rido.BFLite.Core.slnx
+      run: dotnet restore
     
     - name: Build
-      run: dotnet build Rido.BFLite.Core.slnx --no-restore
+      run: dotnet build --no-restore
     
     - name: Test
-      run: dotnet test Rido.BFLite.Core.slnx --no-build --verbosity normal
+      run: dotnet test --no-build --verbosity normal
