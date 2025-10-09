@@ -35,6 +35,7 @@ public class BotApplication
 
     public Action<Activity>? OnMessage { get; set; }
     public Action<MessageReactionActivityWrapper>? OnMessageReaction { get; set; }
+    public Action<ConversationUpdateActivityWrapper>? OnConversationUpdate { get; set; }
 
     internal async Task<string> ProcessAsync(HttpContext httpContext)
     {
@@ -60,6 +61,10 @@ public class BotApplication
         else if (activity.Type == "messageReaction")
         {
             OnMessageReaction?.Invoke(new MessageReactionActivityWrapper(activity));
+        }
+        else if (activity.Type == "conversationUpdate")
+        {
+            OnConversationUpdate?.Invoke(new ConversationUpdateActivityWrapper(activity));
         }
         else
         {
