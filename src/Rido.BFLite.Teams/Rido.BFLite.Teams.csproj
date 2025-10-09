@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\src\Rido.BFLite.Core\Rido.BFLite.Core.csproj" />
+    <ProjectReference Include="..\Rido.BFLite.Core\Rido.BFLite.Core.csproj" />
   </ItemGroup>
 
 </Project>
