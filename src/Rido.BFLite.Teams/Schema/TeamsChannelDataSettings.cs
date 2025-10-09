@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace Rido.BFLite.Teams.Schema;
 
-public class ChannelDataSettings
+public class TeamsChannelDataSettings
 {
     [JsonPropertyName("selectedChannel")]
     public required TeamsChannel SelectedChannel { get; set; }

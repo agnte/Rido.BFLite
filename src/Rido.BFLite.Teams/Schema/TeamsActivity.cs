@@ -27,5 +27,5 @@ public class TeamsActivity : Activity<TeamsChannelData>
     [JsonPropertyName("from")] public new TeamsConversationAccount From { get; set; }
     [JsonPropertyName("recipient")] public new TeamsConversationAccount Recipient { get; set; }
     [JsonPropertyName("conversation")] public new TeamsConversation Conversation { get; set; }
-    [JsonPropertyName("conversation")] public new TeamsChannelData? ChannelData { get; set; }
+    [JsonPropertyName("channelData")] public new TeamsChannelData? ChannelData { get; set; }
 }

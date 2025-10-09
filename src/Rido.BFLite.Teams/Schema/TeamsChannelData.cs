@@ -38,7 +38,7 @@ public class TeamsChannelData : ChannelData
 
 
     [JsonPropertyName("settings")]
-    public ChannelDataSettings? Settings { get; set; }
+    public TeamsChannelDataSettings? Settings { get; set; }
 
     [JsonPropertyName("teamsChannelId")]
     public string? TeamsChannelId { get; set; }
