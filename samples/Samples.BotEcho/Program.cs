@@ -17,9 +17,9 @@ botApp.OnMessage = async activity =>
 
 botApp.OnMessageReaction = async reaction =>
 {
-    string result = @"Reaction received at {DateTime.Now:T}. " +
-    $"                  Added: {reaction.ReactionsAdded!.FirstOrDefault()!.Type} " +
-    $"                  Removed: {reaction.ReactionsRemoved!.FirstOrDefault()!.Type}";
+    string result = @$"Reaction received at {DateTime.Now:T}. " +
+    $"                  Added: {reaction.ReactionsAdded?.FirstOrDefault()?.Type} " +
+    $"                  Removed: {reaction.ReactionsRemoved?.FirstOrDefault()?.Type}";
 
     Activity reply = reaction.Activity.CreateReplyActivity(result);
     await botApp.SendActivityAsync(reply);
