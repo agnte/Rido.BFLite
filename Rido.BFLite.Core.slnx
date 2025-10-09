@@ -1,4 +1,8 @@
 <Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="Directory.Build.props" />
+    <File Path="version.json" />
+  </Folder>
   <Folder Name="/UnitTests/">
     <Project Path="test/Rido.BFLite.Core.Tests/Rido.BFLite.Core.Tests.csproj" Id="deb30ad4-8247-4b80-b764-b8409e7dde31" />
     <Project Path="test/Rido.BFLite.Teams.Tests/Rido.BFLite.Teams.Tests.csproj" />
