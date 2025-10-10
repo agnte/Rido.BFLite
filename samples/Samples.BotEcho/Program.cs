@@ -32,11 +32,11 @@ botApp.OnInstallationUpdate = installationUpdate =>
 
 botApp.OnConversationUpdate = async conversationUpdate =>
 {
-    string result = $@" Members have changed \n ";
-    result += "Added: \n";
-    conversationUpdate.MembersAdded?.ToList().ForEach(ma => result += $" {ma.Id} - {ma.Name} \n");
-    result += "Removed: \n";
-    conversationUpdate.MembersRemoved?.ToList().ForEach(mr => result += $" {mr.Id} - {mr.Name}\n");
+    string result = " Members changed";
+    result += "\n\n Added: \n\n";
+    conversationUpdate.MembersAdded?.ToList().ForEach(ma => result += $" **{ma.Name}** \n");
+    result += "Removed: \n\n";
+    conversationUpdate.MembersRemoved?.ToList().ForEach(mr => result += $" {mr.Name}\n");
     await botApp.SendActivityAsync(conversationUpdate.Activity.CreateReplyActivity(result));
 };
 
