@@ -5,23 +5,12 @@
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
 	"image": "mcr.microsoft.com/devcontainers/dotnet:1-9.0-bookworm",
 	"features": {
-		"ghcr.io/devcontainers/features/azure-cli:1": {
-			"installBicep": true,
-			"version": "latest",
-			"bicepVersion": "latest"
-		},
-		"ghcr.io/azure/azure-dev/azd:0": {
-			"version": "stable"
-		},
-		"ghcr.io/devcontainers-extra/features/devcontainers-cli:1": {
-			"version": "latest"
-		},
-		"ghcr.io/dotnet/aspire-devcontainer-feature/dotnetaspire:1": {
-			"version": "9.0"
-		},
-		"ghcr.io/devcontainers/features/dotnet:2": {
-			"version": "latest"
-		}
+		"ghcr.io/devcontainers/features/azure-cli:1": {},
+		"ghcr.io/azure/azure-dev/azd:0": {},
+		"ghcr.io/devcontainers-extra/features/devcontainers-cli:1": {},
+		"ghcr.io/dotnet/aspire-devcontainer-feature/dotnetaspire:1": {},
+		"ghcr.io/devcontainers/features/dotnet:2": {},
+		"ghcr.io/stuartleeks/dev-container-features/dev-tunnels:0": {}
 	}
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
