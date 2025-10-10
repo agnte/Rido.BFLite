@@ -30,22 +30,14 @@ botApp.OnInstallationUpdate = installationUpdate =>
     Console.WriteLine($"Installation update event. Action: {installationUpdate.Action} for {installationUpdate.SelectedChannelId} channel");
 };
 
-botApp.OnConversationUpdate = conversationUpdate =>
+botApp.OnConversationUpdate = async conversationUpdate =>
 {
-    if (conversationUpdate.MembersAdded != null)
-    {
-        foreach (var member in conversationUpdate.MembersAdded)
-        {
-            Console.WriteLine($"Member added: {member.Id} - {member.Name}");
-        }
-    }
-    if (conversationUpdate.MembersRemoved != null)
-    {
-        foreach (var member in conversationUpdate.MembersRemoved)
-        {
-            Console.WriteLine($"Member removed: {member.Id} - {member.Name}");
-        }
-    }
+    string result = $@" Members have changed \n ";
+    result += "Added: \n";
+    conversationUpdate.MembersAdded?.ToList().ForEach(ma => result += $" {ma.Id} - {ma.Name} \n");
+    result += "Removed: \n";
+    conversationUpdate.MembersRemoved?.ToList().ForEach(mr => result += $" {mr.Id} - {mr.Name}\n");
+    await botApp.SendActivityAsync(conversationUpdate.Activity.CreateReplyActivity(result));
 };
 
 webApp.Run();
