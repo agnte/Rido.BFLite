@@ -2,7 +2,7 @@
 
 public class ChannelData()
 {
-    [JsonPropertyName("clientActivityId")]
+    [JsonPropertyName("clientActivityID")]
     public string? ClientActivityId { get; set; }
 
     [JsonExtensionData]
