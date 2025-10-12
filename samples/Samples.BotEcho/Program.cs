@@ -30,5 +30,15 @@ botApp.OnInstallationUpdate = installationUpdate =>
     Console.WriteLine($"Installation update event. Action: {installationUpdate.Action} for {installationUpdate.SelectedChannelId} channel");
 };
 
+botApp.OnConversationUpdate = async conversationUpdate =>
+{
+    string result = " Members changed";
+    result += "\n\n Added: \n\n";
+    conversationUpdate.MembersAdded?.ToList().ForEach(ma => result += $" **{ma.Name}** \n");
+    result += "Removed: \n\n";
+    conversationUpdate.MembersRemoved?.ToList().ForEach(mr => result += $" {mr.Name}\n");
+    await botApp.SendActivityAsync(conversationUpdate.Activity.CreateReplyActivity(result));
+};
+
 webApp.Run();
 

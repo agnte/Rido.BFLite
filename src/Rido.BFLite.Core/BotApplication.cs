@@ -18,7 +18,6 @@ public class BotApplication
 {
     private readonly ILogger<BotApplication> _logger;
     private ConversationClient? _conversationClient;
-    public Activity? LastActivity { get; private set; }
 
     public BotApplication()
     {
@@ -35,6 +34,7 @@ public class BotApplication
 
     public Action<Activity>? OnMessage { get; set; }
     public Action<MessageReactionActivityWrapper>? OnMessageReaction { get; set; }
+    public Action<ConversationUpdateActivityWrapper>? OnConversationUpdate { get; set; }
 
     internal async Task<string> ProcessAsync(HttpContext httpContext)
     {
@@ -50,22 +50,24 @@ public class BotApplication
             await httpContext.Response.WriteAsync("Invalid activity");
             return "invalid activity";
         }
-        LastActivity = activity;
         OnNewActivity?.Invoke(this, new ActivityEventArgs(activity));
 
-        if (activity.Type == "message")
+        switch (activity.Type)
         {
-            OnMessage?.Invoke(activity);
+            case "message":
+                OnMessage?.Invoke(activity);
+                break;
+            case "messageReaction":
+                OnMessageReaction?.Invoke(new MessageReactionActivityWrapper(activity));
+                break;
+            case "conversationUpdate":
+                OnConversationUpdate?.Invoke(new ConversationUpdateActivityWrapper(activity));
+                break;
+            default:
+                _logger.LogWarning("Unsupported activity type {type} found in the request", activity.Type);
+                break;
         }
-        else if (activity.Type == "messageReaction")
-        {
-            OnMessageReaction?.Invoke(new MessageReactionActivityWrapper(activity));
-        }
-        else
-        {
-            _logger.LogWarning("Unsupported activity type {type} found in the request", activity.Type);
-        }
-        return "invalid activity";
+        return "Processed Activity: " + activity.Type;
     }
 
     private async Task<Activity?> ParseActivityAsync(Stream httpContentBody)
@@ -77,10 +79,11 @@ public class BotApplication
             string body = await sr.ReadToEndAsync();
             _logger.LogTrace("Reading activity from request body \n {Body}", body);
             activity = Activity.FromJsonString(body);
+            File.WriteAllText($"in_act_{activity.Id!.Replace("|", "_")}.json", body);
         }
         else
         {
-            activity = await JsonSerializer.DeserializeAsync<Activity>(httpContentBody);
+            activity = await JsonSerializer.DeserializeAsync<Activity>(httpContentBody, Activity.DefaultJsonOptions);
         }
 
         return activity;

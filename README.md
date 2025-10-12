@@ -86,6 +86,28 @@ botApp.OnMessageReaction = async reaction =>
 };
 ```
 
+### Handle Conversation Updates
+
+```csharp
+botApp.OnConversationUpdate = conversationUpdate =>
+{
+    if (conversationUpdate.MembersAdded != null)
+    {
+        foreach (var member in conversationUpdate.MembersAdded)
+        {
+            Console.WriteLine($"Member added: {member.Id} - {member.Name}");
+        }
+    }
+    if (conversationUpdate.MembersRemoved != null)
+    {
+        foreach (var member in conversationUpdate.MembersRemoved)
+        {
+            Console.WriteLine($"Member removed: {member.Id} - {member.Name}");
+        }
+    }
+};
+```
+
 ### Handle Teams Installation Updates
 
 ```csharp

@@ -7,7 +7,7 @@ public class ExtendedPropertiesDictionary : Dictionary<string, object?> { }
 
 public class Activity() : Activity<ChannelData>()
 {
-    public static new Activity FromJsonString(string json) => JsonSerializer.Deserialize<Activity>(json, defaultJsonOptions)!;
+    public static new Activity FromJsonString(string json) => JsonSerializer.Deserialize<Activity>(json, DefaultJsonOptions)!;
 }
 
 public class Activity<T>(string type = "message") where T : ChannelData, new()
@@ -25,14 +25,14 @@ public class Activity<T>(string type = "message") where T : ChannelData, new()
     [JsonPropertyName("entities")] public JsonArray? Entities { get; set; }
     [JsonExtensionData] public ExtendedPropertiesDictionary Properties { get; set; } = [];
 
-    internal readonly static JsonSerializerOptions defaultJsonOptions = new()
+    public readonly static JsonSerializerOptions DefaultJsonOptions = new()
     {
         WriteIndented = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    public string ToJson() => JsonSerializer.Serialize(this, defaultJsonOptions);
+    public string ToJson() => JsonSerializer.Serialize(this, DefaultJsonOptions);
 
     public static Activity<T> FromJsonString(string json) => JsonSerializer.Deserialize<Activity<T>>(json)!;
 

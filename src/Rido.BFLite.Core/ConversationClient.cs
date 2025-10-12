@@ -21,6 +21,7 @@ public class ConversationClient(IHttpClientFactory httpClientFactory, IAuthoriza
         string url = $"{serviceUri.Scheme}://{serviceUri.Host}/v3/conversations/{activity.Conversation!.Id}/activities";
         string body = activity.ToJson();
 
+        File.WriteAllText($"out_act_{activity.Id!}.json", body);
         logger.LogTrace("Sending response to \n POST {url} \n\n {body} \n\n", url, body);
 
         using HttpResponseMessage resp = await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Post, url)
