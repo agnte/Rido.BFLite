@@ -338,7 +338,7 @@ sequenceDiagram
     Token->>Token: Acquire Token for Bot Framework
     Token-->>CC: Bearer Token
     CC->>CC: Prepare HTTP Request
-    CC->>BFS: POST /v3/conversations/{id}/activities
+    CC->>BFS: POST /v3/conversations/[id]/activities
     BFS-->>CC: HTTP 200 + Activity ID
     CC-->>BA: Activity ID
     BA-->>EP: Success Response
@@ -416,7 +416,7 @@ sequenceDiagram
     participant Keys as Signing Keys
     participant Policy as Authorization Policy
 
-    BFS->>MW: POST /api/messages<br/>Authorization: Bearer {JWT}
+    BFS->>MW: POST /api/messages<br/>Authorization: Bearer [JWT]
     
     MW->>MW: Extract JWT Token
     MW->>Config: Fetch OpenID Configuration
@@ -520,25 +520,25 @@ This flowchart shows the complete activity processing logic within BotApplicatio
 flowchart TD
     Start([Activity Received]) --> Parse[Parse Activity<br/>from HTTP Request]
     Parse --> Store[Store in<br/>LastActivity]
-    Store --> CheckType{Activity.Type?}
+    Store --> CheckType{"Activity.Type?"}
     
     CheckType -->|message| RaiseEvent1[Raise OnNewActivity Event]
     CheckType -->|messageReaction| RaiseEvent2[Raise OnNewActivity Event]
     CheckType -->|installationUpdate<br/>Teams Only| RaiseEvent3[Raise OnNewActivity Event]
     CheckType -->|other| LogWarning[Log Unsupported Type]
     
-    RaiseEvent1 --> CheckHandler1{OnMessage<br/>Handler Set?}
+    RaiseEvent1 --> CheckHandler1{"OnMessage<br/>Handler Set?"}
     CheckHandler1 -->|Yes| InvokeMsg[Invoke OnMessage<br/>with Activity]
     CheckHandler1 -->|No| End
     
     RaiseEvent2 --> CreateWrapper1[Create<br/>MessageReactionActivityWrapper]
-    CreateWrapper1 --> CheckHandler2{OnMessageReaction<br/>Handler Set?}
+    CreateWrapper1 --> CheckHandler2{"OnMessageReaction<br/>Handler Set?"}
     CheckHandler2 -->|Yes| InvokeReaction[Invoke OnMessageReaction<br/>with Wrapper]
     CheckHandler2 -->|No| End
     
     RaiseEvent3 --> ConvertTeams[Convert to<br/>TeamsActivity]
     ConvertTeams --> CreateWrapper2[Create<br/>InstallationUpdateWrapper]
-    CreateWrapper2 --> CheckHandler3{OnInstallationUpdate<br/>Handler Set?}
+    CreateWrapper2 --> CheckHandler3{"OnInstallationUpdate<br/>Handler Set?"}
     CheckHandler3 -->|Yes| InvokeInstall[Invoke OnInstallationUpdate<br/>with Wrapper]
     CheckHandler3 -->|No| End
     
@@ -546,7 +546,7 @@ flowchart TD
     InvokeReaction --> HandlerLogic
     InvokeInstall --> HandlerLogic
     
-    HandlerLogic --> CheckSend{Send Reply?}
+    HandlerLogic --> CheckSend{"Send Reply?"}
     CheckSend -->|Yes| SendActivity[SendActivityAsync]
     CheckSend -->|No| End
     
