@@ -457,8 +457,8 @@ graph TB
     end
 
     subgraph "Service Registration"
-        MSE[MessageLoopServiceCollectionExtensions<br/>.AddMessageLoop&lt;T&gt;]
-        WAS[WebApiSecurity<br/>.AddBotFrameworkAuthentication]
+        MSE["MessageLoopServiceCollectionExtensions<br/>.AddMessageLoop<T>"]
+        WAS["WebApiSecurity<br/>.AddBotFrameworkAuthentication"]
     end
 
     subgraph "Dependency Injection Container"
@@ -471,8 +471,8 @@ graph TB
     end
 
     subgraph "Application Configuration"
-        ABE[AppBuilderExtensions<br/>.UseBotApplication&lt;T&gt;]
-        EP[/api/messages Endpoint]
+        ABE["AppBuilderExtensions<br/>.UseBotApplication<T>"]
+        EP["/api/messages Endpoint"]
     end
 
     subgraph "Runtime"
@@ -571,18 +571,18 @@ This diagram illustrates how the library uses generic types and extension data t
 ```mermaid
 graph TB
     subgraph "Generic Activity Model"
-        AT[Activity&lt;T&gt; where T: ChannelData]
+        AT["Activity<T> where T: ChannelData"]
         ACD[ChannelData]
         EP[ExtensionData Properties]
     end
 
     subgraph "Core Implementations"
-        A[Activity<br/>Activity&lt;ChannelData&gt;]
+        A["Activity<br/>Activity<ChannelData>"]
     end
 
     subgraph "Teams Implementations"
-        TA[TeamsActivity<br/>Activity&lt;TeamsChannelData&gt;]
-        TCD[TeamsChannelData<br/>: ChannelData]
+        TA["TeamsActivity<br/>Activity<TeamsChannelData>"]
+        TCD["TeamsChannelData<br/>: ChannelData"]
     end
 
     subgraph "Extension Data Pattern"
