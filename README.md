@@ -114,6 +114,8 @@ The library consists of:
 - **Activity Schema**: Strongly-typed models for Bot Framework activities
 - **Hosting Extensions**: ASP.NET Core integration and authentication
 
+For detailed architecture diagrams and explanations, see the [Architecture Documentation](docs/ARCHITECTURE.md).
+
 ## Requirements
 
 - .NET 9.0 or later
