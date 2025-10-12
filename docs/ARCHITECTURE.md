@@ -552,7 +552,7 @@ flowchart TD
     
     SendActivity --> GetToken[Get Bot Framework Token]
     GetToken --> PrepareRequest[Prepare HTTP POST Request]
-    PrepareRequest --> CallAPI[POST /v3/conversations/<br/>{id}/activities]
+    PrepareRequest --> CallAPI["POST /v3/conversations/<br/>{id}/activities"]
     CallAPI --> End([Complete])
     
     LogWarning --> End
