@@ -39,6 +39,7 @@ graph TB
         A[Activity]
         CD[ChannelData]
         MRA[MessageReactionActivityWrapper]
+        CUA[ConversationUpdateActivityWrapper]
     end
 
     subgraph "Hosting Layer"
@@ -68,6 +69,7 @@ graph TB
     BA --> CC
     BA --> A
     BA --> MRA
+    BA --> CUA
     
     ABE --> BA
     ABE --> ASP
@@ -146,10 +148,10 @@ classDiagram
     class BotApplication {
         -ILogger logger
         -ConversationClient conversationClient
-        +Activity LastActivity
         +OnNewActivity EventHandler
         +OnMessage Action~Activity~
         +OnMessageReaction Action~MessageReactionActivityWrapper~
+        +OnConversationUpdate Action~ConversationUpdateActivityWrapper~
         +ProcessAsync(HttpContext) Task~string~
         +SendActivityAsync(Activity) Task~string~
     }
@@ -178,6 +180,7 @@ classDiagram
         +Conversation Conversation
         +JsonArray Entities
         +ExtendedPropertiesDictionary Properties
+        +JsonSerializerOptions DefaultJsonOptions$
         +CreateReplyActivity(string) Activity
         +ToJson() string
         +FromJsonString(string) Activity~T~
@@ -238,6 +241,12 @@ classDiagram
         +IList~MessageReaction~ ReactionsRemoved
     }
 
+    class ConversationUpdateActivityWrapper {
+        +Activity Activity
+        +IList~ConversationAccount~ MembersAdded
+        +IList~ConversationAccount~ MembersRemoved
+    }
+
     class InstallationUpdateWrapper {
         +TeamsActivity Activity
         +string Action
@@ -265,6 +274,7 @@ classDiagram
     BotApplication --> ConversationClient : uses
     BotApplication --> Activity : processes
     BotApplication --> MessageReactionActivityWrapper : creates
+    BotApplication --> ConversationUpdateActivityWrapper : creates
     
     Activity~T~ --> ChannelData : contains
     Activity --|> Activity~T~
@@ -281,6 +291,7 @@ classDiagram
     Activity~T~ --> ConversationAccount : contains
     
     MessageReactionActivityWrapper --> Activity : wraps
+    ConversationUpdateActivityWrapper --> Activity : wraps
     InstallationUpdateWrapper --> TeamsActivity : wraps
     TeamsBotApplication --> InstallationUpdateWrapper : creates
     
@@ -519,31 +530,34 @@ This flowchart shows the complete activity processing logic within BotApplicatio
 ```mermaid
 flowchart TD
     Start([Activity Received]) --> Parse[Parse Activity<br/>from HTTP Request]
-    Parse --> Store[Store in<br/>LastActivity]
-    Store --> CheckType{"Activity.Type?"}
+    Parse --> RaiseEvent[Raise OnNewActivity Event]
+    RaiseEvent --> CheckType{"Activity.Type?"}
     
-    CheckType -->|message| RaiseEvent1[Raise OnNewActivity Event]
-    CheckType -->|messageReaction| RaiseEvent2[Raise OnNewActivity Event]
-    CheckType -->|installationUpdate<br/>Teams Only| RaiseEvent3[Raise OnNewActivity Event]
+    CheckType -->|message| CheckHandler1{"OnMessage<br/>Handler Set?"}
+    CheckType -->|messageReaction| CreateWrapper1[Create<br/>MessageReactionActivityWrapper]
+    CheckType -->|conversationUpdate| CreateWrapper2[Create<br/>ConversationUpdateActivityWrapper]
+    CheckType -->|installationUpdate<br/>Teams Only| ConvertTeams[Convert to<br/>TeamsActivity]
     CheckType -->|other| LogWarning[Log Unsupported Type]
     
-    RaiseEvent1 --> CheckHandler1{"OnMessage<br/>Handler Set?"}
     CheckHandler1 -->|Yes| InvokeMsg[Invoke OnMessage<br/>with Activity]
     CheckHandler1 -->|No| End
     
-    RaiseEvent2 --> CreateWrapper1[Create<br/>MessageReactionActivityWrapper]
     CreateWrapper1 --> CheckHandler2{"OnMessageReaction<br/>Handler Set?"}
     CheckHandler2 -->|Yes| InvokeReaction[Invoke OnMessageReaction<br/>with Wrapper]
     CheckHandler2 -->|No| End
     
-    RaiseEvent3 --> ConvertTeams[Convert to<br/>TeamsActivity]
-    ConvertTeams --> CreateWrapper2[Create<br/>InstallationUpdateWrapper]
-    CreateWrapper2 --> CheckHandler3{"OnInstallationUpdate<br/>Handler Set?"}
-    CheckHandler3 -->|Yes| InvokeInstall[Invoke OnInstallationUpdate<br/>with Wrapper]
+    CreateWrapper2 --> CheckHandler3{"OnConversationUpdate<br/>Handler Set?"}
+    CheckHandler3 -->|Yes| InvokeConvUpdate[Invoke OnConversationUpdate<br/>with Wrapper]
     CheckHandler3 -->|No| End
+    
+    ConvertTeams --> CreateWrapper3[Create<br/>InstallationUpdateWrapper]
+    CreateWrapper3 --> CheckHandler4{"OnInstallationUpdate<br/>Handler Set?"}
+    CheckHandler4 -->|Yes| InvokeInstall[Invoke OnInstallationUpdate<br/>with Wrapper]
+    CheckHandler4 -->|No| End
     
     InvokeMsg --> HandlerLogic[Application Handler Logic]
     InvokeReaction --> HandlerLogic
+    InvokeConvUpdate --> HandlerLogic
     InvokeInstall --> HandlerLogic
     
     HandlerLogic --> CheckSend{"Send Reply?"}
@@ -624,11 +638,13 @@ The library uses C# events and action delegates to allow applications to respond
 - `OnNewActivity` - Event raised for all activities
 - `OnMessage` - Action for message activities
 - `OnMessageReaction` - Action for reaction activities
+- `OnConversationUpdate` - Action for conversation update activities (members added/removed)
 - `OnInstallationUpdate` - Action for Teams installation updates (Teams extension)
 
 ### 2. **Wrapper Pattern**
 Complex activities are wrapped in specialized classes that extract and expose relevant data:
 - `MessageReactionActivityWrapper` - Extracts reaction data from activity properties
+- `ConversationUpdateActivityWrapper` - Extracts member changes from conversation updates
 - `InstallationUpdateWrapper` - Extracts Teams installation data and provides helper properties
 
 ### 3. **Extension Data Pattern**
