@@ -10,7 +10,7 @@ public class Activity() : Activity<ChannelData>()
     public static new Activity FromJsonString(string json) => JsonSerializer.Deserialize<Activity>(json, DefaultJsonOptions)!;
 }
 
-public class Activity<T>(string type = "message") where T : ChannelData, new()
+public class Activity<TChannelData>(string type = "message") where TChannelData : ChannelData, new()
 {
     [JsonPropertyName("type")] public string Type { get; set; } = type;
     [JsonPropertyName("channelId")] public string? ChannelId { get; set; }
@@ -18,7 +18,7 @@ public class Activity<T>(string type = "message") where T : ChannelData, new()
     [JsonPropertyName("id")] public string? Id { get; set; }
     [JsonPropertyName("serviceUrl")] public string? ServiceUrl { get; set; }
     [JsonPropertyName("replyToId")] public string? ReplyToId { get; set; }
-    [JsonPropertyName("channelData")] public T? ChannelData { get; set; }
+    [JsonPropertyName("channelData")] public TChannelData? ChannelData { get; set; }
     [JsonPropertyName("from")] public ConversationAccount? From { get; set; }
     [JsonPropertyName("recipient")] public ConversationAccount? Recipient { get; set; }
     [JsonPropertyName("conversation")] public Conversation? Conversation { get; set; }
@@ -34,7 +34,7 @@ public class Activity<T>(string type = "message") where T : ChannelData, new()
 
     public string ToJson() => JsonSerializer.Serialize(this, DefaultJsonOptions);
 
-    public static Activity<T> FromJsonString(string json) => JsonSerializer.Deserialize<Activity<T>>(json)!;
+    public static Activity<TChannelData> FromJsonString(string json) => JsonSerializer.Deserialize<Activity<TChannelData>>(json)!;
 
     public Activity CreateReplyActivity(string text = "")
     {

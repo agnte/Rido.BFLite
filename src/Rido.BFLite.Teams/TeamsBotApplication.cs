@@ -15,7 +15,7 @@ public class TeamsBotApplication : BotApplication
 
     public TeamsBotApplication(IConfiguration config, ILogger<BotApplication> logger) : base(config, logger)
     {
-        OnNewActivity += (sender, args) =>
+        OnActivity += (sender, args) =>
         {
             logger.LogInformation("New activity received of type {type} from {from}", args.Activity.Type, args.Activity.From?.Id);
             TeamsActivity activity = TeamsActivity.FromActivity(args.Activity);
