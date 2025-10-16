@@ -7,6 +7,7 @@
     <Project Path="test/Rido.BFLite.Core.Tests/Rido.BFLite.Core.Tests.csproj" Id="deb30ad4-8247-4b80-b764-b8409e7dde31" />
     <Project Path="test/Rido.BFLite.Teams.Tests/Rido.BFLite.Teams.Tests.csproj" />
   </Folder>
+  <Project Path="samples/ABSTokenServiceClient/ABSTokenServiceClient.csproj" />
   <Project Path="samples/Samples.BotEcho/Samples.EchoBot.csproj" />
   <Project Path="src/Rido.BFLite.Core/Rido.BFLite.Core.csproj" />
   <Project Path="src/Rido.BFLite.Teams/Rido.BFLite.Teams.csproj" />

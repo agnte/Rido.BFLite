@@ -13,7 +13,7 @@ public class ConversationClient(IHttpClientFactory httpClientFactory, IAuthoriza
         using HttpClient httpClient = httpClientFactory.CreateClient();
         string token = await tokenProvider!.CreateAuthorizationHeaderForAppAsync(
             "https://api.botframework.com/.default",
-            new AuthorizationHeaderProviderOptions() { RequestAppToken = true, AcquireTokenOptions = new AcquireTokenOptions() { Tenant = "botframework.com" } },
+            new AuthorizationHeaderProviderOptions() { RequestAppToken = true, AcquireTokenOptions = new AcquireTokenOptions() { /* Tenant = "botframework.com" */ } },
             cancellationToken);
         httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token["Bearer ".Length..]);
 
@@ -21,9 +21,12 @@ public class ConversationClient(IHttpClientFactory httpClientFactory, IAuthoriza
         string url = $"{serviceUri.Scheme}://{serviceUri.Host}/v3/conversations/{activity.Conversation!.Id}/activities";
         string body = activity.ToJson();
 
-        File.WriteAllText($"out_act_{activity.Id!}.json", body);
-        logger.LogTrace("Sending response to \n POST {url} \n\n {body} \n\n", url, body);
-
+        if (logger.IsEnabled(LogLevel.Trace))
+        {
+            File.WriteAllText($"out_act_{activity.Id!}.json", body);
+            logger.LogTrace("Sending response to \n POST {url} \n\n {body} \n\n", url, body);
+        }
+        logger.LogInformation("Sending Activity to {Url}", url);
         using HttpResponseMessage resp = await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Post, url)
         {
             Content = new StringContent(body, Encoding.UTF8, "application/json")

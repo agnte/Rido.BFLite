@@ -17,7 +17,6 @@ public class TeamsBotApplication : BotApplication
     {
         OnActivity += (sender, args) =>
         {
-            logger.LogInformation("New activity received of type {type} from {from}", args.Activity.Type, args.Activity.From?.Id);
             TeamsActivity activity = TeamsActivity.FromActivity(args.Activity);
             if (activity.Type == "installationUpdate")
             {
