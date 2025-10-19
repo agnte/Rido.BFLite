@@ -11,10 +11,13 @@ namespace Rido.BFLite.Core.Hosting;
 
 public static class WebApiSecurity
 {
-    private static readonly string[] validTokenIssuers = ["https://api.botframework.com"];
+    private static IList<string> validTokenIssuers = ["https://api.botframework.com"];
     public static void AddBotFrameworkAuthentication(this IServiceCollection services, string tokenValidationSectionName = "AzureAd")
     {
         IConfiguration configuration = services.BuildServiceProvider().GetRequiredService<IConfiguration>();
+        string? tenantId = configuration[$"{tokenValidationSectionName}:TenantId"];
+        string dir = string.IsNullOrEmpty(tenantId) ? "botframework.com" : tenantId;
+        validTokenIssuers.Add($"https://login.microsoftonline.com/{dir}/v2.0");
         services
             .AddAuthentication()
             .AddMicrosoftIdentityWebApi(configuration.GetSection(tokenValidationSectionName), JwtBearerDefaults.AuthenticationScheme, true)
@@ -24,10 +27,19 @@ public static class WebApiSecurity
         services.Configure<JwtBearerOptions>("Bearer", options =>
         {
             options.SaveToken = true;
+            string cid = configuration[$"{tokenValidationSectionName}:ClientId"];
+            string? abp = configuration[$"{tokenValidationSectionName}:ABP"];
+            string validAudience = cid;
+            if (!string.IsNullOrEmpty(abp))
+            {
+                validAudience = abp;
+            }
+
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidIssuers = validTokenIssuers,
-                ValidAudience = configuration[$"{tokenValidationSectionName}:ClientId"],
+                //ValidAudiences = [cid, abp],
+                ValidAudience = validAudience,
                 ValidateAudience = true,
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
@@ -35,14 +47,19 @@ public static class WebApiSecurity
                 ClockSkew = TimeSpan.FromMinutes(5),
             };
 
-            options.TokenValidationParameters.EnableAadSigningKeyIssuerValidation();
+            string oidcAuthority = string.IsNullOrEmpty(abp)
+                ? "https://login.botframework.com/v1/.well-known/openid-configuration"
+                : $"https://login.microsoftonline.com/{tenantId ?? "botframework.com"}/v2.0/.well-known/openid-configuration";
+
             options.ConfigurationManager = new ConfigurationManager<OpenIdConnectConfiguration>(
-                "https://login.botframework.com/v1/.well-known/openid-configuration",
+                oidcAuthority,
                 new OpenIdConnectConfigurationRetriever(),
                 new HttpDocumentRetriever
                 {
                     RequireHttps = options.RequireHttpsMetadata
                 });
+
+            options.TokenValidationParameters.EnableAadSigningKeyIssuerValidation();
         });
 
 #pragma warning disable ASP0025 // Use AddAuthorizationBuilder

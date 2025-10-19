@@ -32,9 +32,9 @@ public class BotApplication
 
     public event EventHandler<ActivityEventArgs>? OnActivity;
 
-    public Action<Activity>? OnMessage { get; set; }
-    public Action<MessageReactionActivityWrapper>? OnMessageReaction { get; set; }
-    public Action<ConversationUpdateActivityWrapper>? OnConversationUpdate { get; set; }
+    public Func<Activity, Task>? OnMessage { get; set; }
+    public Func<MessageReactionActivityWrapper, Task>? OnMessageReaction { get; set; }
+    public Func<ConversationUpdateActivityWrapper, Task>? OnConversationUpdate { get; set; }
 
     internal async Task<string> ProcessAsync(HttpContext httpContext)
     {
@@ -47,15 +47,15 @@ public class BotApplication
             switch (activity.Type)
             {
                 case "message":
-                    OnMessage?.Invoke(activity);
+                    await OnMessage?.Invoke(activity);
                     _logger.LogInformation("Message activity handled");
                     break;
                 case "messageReaction":
-                    OnMessageReaction?.Invoke(new MessageReactionActivityWrapper(activity));
+                    await OnMessageReaction?.Invoke(new MessageReactionActivityWrapper(activity));
                     _logger.LogInformation("MessageReaction activity handled");
                     break;
                 case "conversationUpdate":
-                    OnConversationUpdate?.Invoke(new ConversationUpdateActivityWrapper(activity));
+                    await OnConversationUpdate?.Invoke(new ConversationUpdateActivityWrapper(activity));
                     _logger.LogInformation("ConversationUpdate activity handled");
                     break;
                 default:
@@ -75,7 +75,7 @@ public class BotApplication
             string body = await sr.ReadToEndAsync();
             _logger.LogTrace("Reading activity from request body \n {Body} \n", body);
             activity = Activity.FromJsonString(body);
-            File.WriteAllText($"in_act_{activity.Type}_{activity.Id!.Replace("|", "_")}.json", body);
+            //File.WriteAllText($"in_act_{activity.Type}_{activity.Id!.Replace("|", "_")}.json", body);
         }
         else
         {
