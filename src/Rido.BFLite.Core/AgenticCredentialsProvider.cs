@@ -13,6 +13,7 @@ public class AgenticCredentialsProvider(IConfiguration configuration, string tok
     string secret = configuration[$"{tokenValidationSectionName}:ClientCredentials:0:ClientSecret"] ?? throw new ArgumentNullException($"{tokenValidationSectionName}:ClientCredentials:0:ClientSecret");
     string fmiPath = configuration[$"{tokenValidationSectionName}:ClientCredentials:0:FmiPath"] ?? throw new ArgumentNullException($"{tokenValidationSectionName}:ClientCredentials:0:FmiPath");
     string userId = configuration[$"{tokenValidationSectionName}:UserId"] ?? throw new ArgumentNullException($"{tokenValidationSectionName}:UserId");
+    string agentScope = configuration[$"{tokenValidationSectionName}:AgentScope"] ?? throw new ArgumentNullException($"{tokenValidationSectionName}:AgentScope");
     //string fmiPath = configuration[$"{tokenValidationSectionName}:ABP"] ?? throw new ArgumentNullException("ABP");
 
     public Task<string> CreateAuthorizationHeaderAsync(IEnumerable<string> scopes, AuthorizationHeaderProviderOptions? options = null, ClaimsPrincipal? claimsPrincipal = null, CancellationToken cancellationToken = default)
@@ -59,7 +60,7 @@ public class AgenticCredentialsProvider(IConfiguration configuration, string tok
 
         //string[] apxScope = new string[] { "0d94caae-b412-4943-8a68-83135ad6d35f/.default" };
         //IList<string> apxScope = ["5a807f24-c9de-44ee-a3a7-329e88a00ffc/.default"];
-        IList<string> apxScope = ["0d94caae-b412-4943-8a68-83135ad6d35f/.default"];
+        IList<string> apxScope = [agentScope];
 
         AuthenticationResult userToken = await cca
                         .AcquireTokenByUsernamePassword(apxScope, "no-user-name", "no_password")

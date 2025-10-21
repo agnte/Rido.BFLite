@@ -13,7 +13,7 @@ public class ConversationClient(IHttpClientFactory httpClientFactory, IAuthoriza
     {
         string? tenantId = configuration["AzureAd:ClientCredentials:0:TenantId"];
         //string scope = "https://api.botframework.com/.default";
-        string scope = "0d94caae-b412-4943-8a68-83135ad6d35f/.default";
+        string scope = configuration["AzureAd:AgentScope"] ?? throw new InvalidOperationException("AzureAd:AgentScope");
 
         using HttpClient httpClient = httpClientFactory.CreateClient();
         string token = await tokenProvider!.CreateAuthorizationHeaderForAppAsync(
@@ -24,7 +24,7 @@ public class ConversationClient(IHttpClientFactory httpClientFactory, IAuthoriza
         httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
         Uri serviceUri = new(activity.ServiceUrl!);
-        string url = $"{serviceUri.Scheme}://{serviceUri.Host}/v3/conversations/{activity.Conversation!.Id}/activities/";
+        string url = $"{serviceUri.Scheme}://{serviceUri.Host}/amer/{tenantId}/v3/conversations/{activity.Conversation!.Id}/activities/";
         string body = activity.ToJson();
 
         //File.WriteAllText($"out_act_{activity.Id!}.json", body);

@@ -123,9 +123,9 @@ public class BotApplication
 
     public async Task<string> CheckConfigAsync()
     {
-        var clientCrendetialProvider = new AgenticCredentialsProvider(_configuration);
-        var token = await clientCrendetialProvider.CreateAuthorizationHeaderForAppAsync("https://graph.microsoft.com/.default");
-        Console.WriteLine(token);
+        var agenticCredentialsProvider = new AgenticCredentialsProvider(_configuration);
+        var token = await agenticCredentialsProvider.CreateAuthorizationHeaderForAppAsync(_configuration["AzureAd:AgentScope"]!);
+        _logger.LogTrace("Acquired Token {Token}", token);
         return token;
     }
 }
