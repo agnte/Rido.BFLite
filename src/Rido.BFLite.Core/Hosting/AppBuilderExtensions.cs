@@ -16,7 +16,7 @@ public static class AppBuilderExtensions
         {
             string resp = await app.ProcessAsync(httpContext);
             return resp;
-        });//.RequireAuthorization("Bot");
+        }).RequireAuthorization("Bot");
 
         return app;
     }

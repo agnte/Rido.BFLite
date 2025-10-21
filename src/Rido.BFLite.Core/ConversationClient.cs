@@ -12,15 +12,19 @@ public class ConversationClient(IHttpClientFactory httpClientFactory, IAuthoriza
     public async Task<string> SendActivityAsync(Activity activity, CancellationToken cancellationToken = default)
     {
         string? tenantId = configuration["AzureAd:ClientCredentials:0:TenantId"];
+        //string scope = "https://api.botframework.com/.default";
+        string scope = "0d94caae-b412-4943-8a68-83135ad6d35f/.default";
+
         using HttpClient httpClient = httpClientFactory.CreateClient();
         string token = await tokenProvider!.CreateAuthorizationHeaderForAppAsync(
-            "https://api.botframework.com/.default",
-            new AuthorizationHeaderProviderOptions() { RequestAppToken = true, AcquireTokenOptions = new AcquireTokenOptions() { Tenant = tenantId ?? "botframework.com" } },
+            scope,
+            new AuthorizationHeaderProviderOptions(),
             cancellationToken);
-        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token["Bearer ".Length..]);
+        //httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token["Bearer ".Length..]);
+        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
         Uri serviceUri = new(activity.ServiceUrl!);
-        string url = $"{serviceUri.Scheme}://{serviceUri.Host}/v3/conversations/{activity.Conversation!.Id}/activities";
+        string url = $"{serviceUri.Scheme}://{serviceUri.Host}/v3/conversations/{activity.Conversation!.Id}/activities/";
         string body = activity.ToJson();
 
         //File.WriteAllText($"out_act_{activity.Id!}.json", body);

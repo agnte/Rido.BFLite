@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Identity.Abstractions;
 using Microsoft.Identity.Web;
 using Microsoft.IdentityModel.Protocols;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
@@ -24,10 +25,12 @@ public static class WebApiSecurity
             .EnableTokenAcquisitionToCallDownstreamApi()
             .AddInMemoryTokenCaches();
 
+        services.AddScoped<IAuthorizationHeaderProvider, AgenticCredentialsProvider>();
+
         services.Configure<JwtBearerOptions>("Bearer", options =>
         {
             options.SaveToken = true;
-            string cid = configuration[$"{tokenValidationSectionName}:ClientId"];
+            string cid = configuration[$"{tokenValidationSectionName}:ClientId"]!;
             string? abp = configuration[$"{tokenValidationSectionName}:ABP"];
             string validAudience = cid;
             if (!string.IsNullOrEmpty(abp))
