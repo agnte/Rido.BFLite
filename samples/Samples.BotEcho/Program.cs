@@ -9,7 +9,7 @@ webAppBuilder.Services.AddMessageLoop<TeamsBotApplication>();
 WebApplication webApp = webAppBuilder.Build();
 TeamsBotApplication botApp = webApp.UseBotApplication<TeamsBotApplication>();
 
-await botApp.CheckConfigAsync();
+// await botApp.CheckConfigAsync();
 botApp.OnMessage = async activity =>
 {
     Activity reply = activity.CreateReplyActivity($"you said {activity.Text}, with ❤️ at {DateTime.Now:T}");

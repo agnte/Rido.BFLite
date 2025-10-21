@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Identity.Abstractions;
+using Microsoft.IdentityModel.JsonWebTokens;
 using Rido.BFLite.Core.Schema;
 using System.Net.Http.Headers;
 using System.Text;
@@ -11,14 +12,24 @@ public class ConversationClient(IHttpClientFactory httpClientFactory, IAuthoriza
 {
     public async Task<string> SendActivityAsync(Activity activity, CancellationToken cancellationToken = default)
     {
-        string? tenantId = configuration["AzureAd:ClientCredentials:0:TenantId"];
+        string? tenantId = configuration["AzureAd:TenantId"];
         //string scope = "https://api.botframework.com/.default";
         string scope = configuration["AzureAd:AgentScope"] ?? throw new InvalidOperationException("AzureAd:AgentScope");
 
         using HttpClient httpClient = httpClientFactory.CreateClient();
         string token = await tokenProvider!.CreateAuthorizationHeaderForAppAsync(
             scope,
-            new AuthorizationHeaderProviderOptions(),
+            new AuthorizationHeaderProviderOptions() {  
+                AcquireTokenOptions = new () 
+                { 
+                    FmiPath = activity.From!.Properties["agenticAppId"]!.ToString(),
+                    Tenant = tenantId,
+                    ExtraHeadersParameters = new Dictionary<string, string>
+                    {
+                        { "x-ms-agentic-user-id", activity.From!.Properties["agenticUserId"]!.ToString()! }
+                    }
+                } 
+            },
             cancellationToken);
         //httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token["Bearer ".Length..]);
         httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -27,8 +38,15 @@ public class ConversationClient(IHttpClientFactory httpClientFactory, IAuthoriza
         string url = $"{serviceUri.Scheme}://{serviceUri.Host}/amer/{tenantId}/v3/conversations/{activity.Conversation!.Id}/activities/";
         string body = activity.ToJson();
 
-        //File.WriteAllText($"out_act_{activity.Id!}.json", body);
-        logger.LogTrace("Sending response to \n POST {url} \n\n {body} \n\n", url, body);
+        if (logger.IsEnabled(LogLevel.Trace))
+        {
+            //File.WriteAllText($"out_act_{activity.Id!}.json", body);
+            logger.LogTrace("\n POST {url} \n\n", url);
+            logger.LogTrace("Token Claims : \n {claims}", string.Join("\n ", new JsonWebToken(token).Claims.Select(c => $"{c.Type}: {c.Value}")));
+            logger.LogTrace("Body: \n {Body} \n", body);
+        }
+
+
 
         using HttpResponseMessage resp = await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Post, url)
         {

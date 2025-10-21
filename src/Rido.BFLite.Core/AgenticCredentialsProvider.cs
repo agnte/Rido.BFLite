@@ -8,13 +8,10 @@ namespace Rido.BFLite.Core;
 
 public class AgenticCredentialsProvider(IConfiguration configuration, string tokenValidationSectionName = "AzureAd") : IAuthorizationHeaderProvider
 {
-    string tenantId = configuration[$"{tokenValidationSectionName}:ClientCredentials:0:TenantId"] ?? throw new ArgumentNullException($"{tokenValidationSectionName}:ClientCredentials:0:TenantId");
-    string clientId = configuration[$"{tokenValidationSectionName}:ClientCredentials:0:ClientId"] ?? throw new ArgumentNullException($"{tokenValidationSectionName}:ClientCredentials:0:ClientId");
+    string tenantId = configuration[$"{tokenValidationSectionName}:TenantId"] ?? throw new ArgumentNullException($"{tokenValidationSectionName}:TenantId");
+    string clientId = configuration[$"{tokenValidationSectionName}:ClientId"] ?? throw new ArgumentNullException($"{tokenValidationSectionName}:ClientId");
     string secret = configuration[$"{tokenValidationSectionName}:ClientCredentials:0:ClientSecret"] ?? throw new ArgumentNullException($"{tokenValidationSectionName}:ClientCredentials:0:ClientSecret");
-    string fmiPath = configuration[$"{tokenValidationSectionName}:ClientCredentials:0:FmiPath"] ?? throw new ArgumentNullException($"{tokenValidationSectionName}:ClientCredentials:0:FmiPath");
-    string userId = configuration[$"{tokenValidationSectionName}:UserId"] ?? throw new ArgumentNullException($"{tokenValidationSectionName}:UserId");
     string agentScope = configuration[$"{tokenValidationSectionName}:AgentScope"] ?? throw new ArgumentNullException($"{tokenValidationSectionName}:AgentScope");
-    //string fmiPath = configuration[$"{tokenValidationSectionName}:ABP"] ?? throw new ArgumentNullException("ABP");
 
     public Task<string> CreateAuthorizationHeaderAsync(IEnumerable<string> scopes, AuthorizationHeaderProviderOptions? options = null, ClaimsPrincipal? claimsPrincipal = null, CancellationToken cancellationToken = default)
     {
@@ -24,6 +21,8 @@ public class AgenticCredentialsProvider(IConfiguration configuration, string tok
     public async Task<string> CreateAuthorizationHeaderForAppAsync(string scopes, AuthorizationHeaderProviderOptions? downstreamApiOptions = null, CancellationToken cancellationToken = default)
     {
         string authority = $"https://login.microsoftonline.com/{tenantId}";
+        string fmiPath = downstreamApiOptions?.AcquireTokenOptions?.FmiPath ?? throw new InvalidOperationException("FmiPath not set in Auth Options");
+        string userId = downstreamApiOptions?.AcquireTokenOptions?.ExtraHeadersParameters?["x-ms-agentic-user-id"] ?? throw new InvalidOperationException("x-ms-agentic-user-id not set in ExtraHeadersParameters");
 
         IList<string> scopesAD = new[] { "api://AzureADTokenExchange/.default" };
 

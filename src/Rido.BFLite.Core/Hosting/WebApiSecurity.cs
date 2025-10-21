@@ -31,18 +31,13 @@ public static class WebApiSecurity
         {
             options.SaveToken = true;
             string cid = configuration[$"{tokenValidationSectionName}:ClientId"]!;
-            string? abp = configuration[$"{tokenValidationSectionName}:ABP"];
-            string validAudience = cid;
-            if (!string.IsNullOrEmpty(abp))
-            {
-                validAudience = abp;
-            }
+            
 
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidIssuers = validTokenIssuers,
                 //ValidAudiences = [cid, abp],
-                ValidAudience = validAudience,
+                ValidAudience = cid,
                 ValidateAudience = true,
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
@@ -50,7 +45,7 @@ public static class WebApiSecurity
                 ClockSkew = TimeSpan.FromMinutes(5),
             };
 
-            string oidcAuthority = string.IsNullOrEmpty(abp)
+            string oidcAuthority = string.IsNullOrEmpty(configuration["AzureAd:AgentScope"])
                 ? "https://login.botframework.com/v1/.well-known/openid-configuration"
                 : $"https://login.microsoftonline.com/{tenantId ?? "botframework.com"}/v2.0/.well-known/openid-configuration";
 
