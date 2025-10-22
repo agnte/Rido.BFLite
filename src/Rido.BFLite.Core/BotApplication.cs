@@ -75,7 +75,7 @@ public class BotApplication
             string body = await sr.ReadToEndAsync();
             _logger.LogTrace("Reading activity from request body \n {Body} \n", body);
             activity = Activity.FromJsonString(body);
-            File.WriteAllText($"in_act_{activity.Type}_{activity.Id!.Replace("|", "_")}.json", body);
+            //File.WriteAllText($"in_act_{activity.Type}_{activity.Id!.Replace("|", "_")}.json", body);
         }
         else
         {
