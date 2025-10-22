@@ -24,19 +24,27 @@ public class ConversationClient(IHttpClientFactory httpClientFactory, IAuthoriza
         
         if (agenticAppId == null || agenticUserId == null)
         {
-            headerProviderOptions = new();
+            headerProviderOptions = new()
+            {
+                RequestAppToken = true,
+                AcquireTokenOptions = new()
+                {
+                    Tenant = tenantId ?? "botframework.com",
+                }
+            };
 
         }
         else
         {
             headerProviderOptions = new()
             {
+                RequestAppToken = true,
                 AcquireTokenOptions = new()
                 {
                     Tenant = tenantId,
                     FmiPath = activity.From!.Properties.TryGetValue("agenticAppId", out object? valueid)
-                    ? valueid!.ToString()
-                    : null,
+                        ? valueid!.ToString()
+                        : null,
                     ExtraHeadersParameters = new Dictionary<string, string>
                     {
                         { "x-ms-agentic-user-id", activity.From!.Properties.TryGetValue("agenticUserId", out object? value)
@@ -49,12 +57,9 @@ public class ConversationClient(IHttpClientFactory httpClientFactory, IAuthoriza
         }
         
         string token = await tokenProvider!.CreateAuthorizationHeaderForAppAsync(scope, headerProviderOptions, cancellationToken);
-
-
+        string tokenValue = token["Bearer ".Length..];
         using HttpClient httpClient = httpClientFactory.CreateClient();
-        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
-        //httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token["Bearer ".Length..]);
+        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokenValue);
 
         Uri serviceUri = new(activity.ServiceUrl!);
         string url = $"{serviceUri.Scheme}://{serviceUri.Host}/amer/{tenantId}/v3/conversations/{activity.Conversation!.Id}/activities/";
@@ -62,9 +67,11 @@ public class ConversationClient(IHttpClientFactory httpClientFactory, IAuthoriza
 
         if (logger.IsEnabled(LogLevel.Trace))
         {
+            var jsonWebToken = new JsonWebToken(tokenValue);
+
             //File.WriteAllText($"out_act_{activity.Id!}.json", body);
             logger.LogTrace("\n POST {url} \n\n", url);
-            // logger.LogTrace("Token Claims : \n {claims}", string.Join("\n ", new JsonWebToken(token).Claims.Select(c => $"{c.Type}: {c.Value}")));
+            logger.LogTrace("Token Claims : \n {claims}", string.Join("\n ", jsonWebToken.Claims.Select(c => $"{c.Type}: {c.Value}")));
             logger.LogTrace("Body: \n {Body} \n", body);
         }
 

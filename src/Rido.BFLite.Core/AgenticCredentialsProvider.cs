@@ -90,7 +90,7 @@ public class AgenticCredentialsProvider(IConfiguration configuration, string tok
                         .ExecuteAsync(cancellationToken)
                         .ConfigureAwait(false);
 
-        return userToken.AccessToken;
+        return "Bearer " + userToken.AccessToken;
     }
 
     public async Task<string> CreateAuthorizationHeaderForUserAsync(IEnumerable<string> scopes2, AuthorizationHeaderProviderOptions? authorizationHeaderProviderOptions = null, ClaimsPrincipal? claimsPrincipal = null, CancellationToken cancellationToken = default)
