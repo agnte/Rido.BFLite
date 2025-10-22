@@ -121,11 +121,11 @@ public class BotApplication
         return await _conversationClient.SendActivityAsync(activity);
     }
 
-    public async Task<string> CheckConfigAsync()
-    {
-        var agenticCredentialsProvider = new AgenticCredentialsProvider(_configuration);
-        var token = await agenticCredentialsProvider.CreateAuthorizationHeaderForAppAsync(_configuration["AzureAd:AgentScope"]!);
-        _logger.LogTrace("Acquired Token {Token}", token);
-        return token;
-    }
+    //public async Task<string> CheckConfigAsync()
+    //{
+    //    var agenticCredentialsProvider = new AgenticCredentialsProvider(_configuration);
+    //    var token = await agenticCredentialsProvider.CreateAuthorizationHeaderForAppAsync(_configuration["AzureAd:AgentScope"]!);
+    //    _logger.LogTrace("Acquired Token {Token}", token);
+    //    return token;
+    //}
 }

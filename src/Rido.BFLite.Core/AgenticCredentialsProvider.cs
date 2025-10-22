@@ -21,8 +21,8 @@ public class AgenticCredentialsProvider(IConfiguration configuration, string tok
     public async Task<string> CreateAuthorizationHeaderForAppAsync(string scopes, AuthorizationHeaderProviderOptions? downstreamApiOptions = null, CancellationToken cancellationToken = default)
     {
         string authority = $"https://login.microsoftonline.com/{tenantId}";
-        string fmiPath = downstreamApiOptions?.AcquireTokenOptions?.FmiPath ?? throw new InvalidOperationException("FmiPath not set in Auth Options");
-        string userId = downstreamApiOptions?.AcquireTokenOptions?.ExtraHeadersParameters?["x-ms-agentic-user-id"] ?? throw new InvalidOperationException("x-ms-agentic-user-id not set in ExtraHeadersParameters");
+        string fmiPath = downstreamApiOptions?.AcquireTokenOptions?.FmiPath!; //?? throw new InvalidOperationException("FmiPath not set in Auth Options");
+        string userId = downstreamApiOptions?.AcquireTokenOptions?.ExtraHeadersParameters?["x-ms-agentic-user-id"]!;// ?? throw new InvalidOperationException("x-ms-agentic-user-id not set in ExtraHeadersParameters");
 
         IList<string> scopesAD = new[] { "api://AzureADTokenExchange/.default" };
 
@@ -33,9 +33,12 @@ public class AgenticCredentialsProvider(IConfiguration configuration, string tok
            .WithClientSecret(secret) // Use the managed identity token as the client assertion
            .Build();
 
-        var result = await agentAppClient.AcquireTokenForClient(scopesAD)
-            .WithFmiPath(fmiPath)
-            .ExecuteAsync(cancellationToken);
+        var tokenExecutor = agentAppClient.AcquireTokenForClient(scopesAD);
+        if (!string.IsNullOrEmpty(fmiPath))
+        {
+            tokenExecutor.WithFmiPath(fmiPath);
+        }
+        var result =  await tokenExecutor.ExecuteAsync(cancellationToken);
 
 #pragma warning disable CS0618 // Type or member is obsolete
         IConfidentialClientApplication agentIdentityClient = ConfidentialClientApplicationBuilder

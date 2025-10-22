@@ -14,9 +14,11 @@ public static class WebApiSecurity
 {
     private static IList<string> validTokenIssuers = ["https://api.botframework.com"];
     public static void AddBotFrameworkAuthentication(this IServiceCollection services, string tokenValidationSectionName = "AzureAd")
+    
     {
         IConfiguration configuration = services.BuildServiceProvider().GetRequiredService<IConfiguration>();
         string? tenantId = configuration[$"{tokenValidationSectionName}:TenantId"];
+        string? agentScope = configuration[$"{tokenValidationSectionName}:AgentScope"];
         string dir = string.IsNullOrEmpty(tenantId) ? "botframework.com" : tenantId;
         validTokenIssuers.Add($"https://login.microsoftonline.com/{dir}/v2.0");
         services
@@ -25,7 +27,10 @@ public static class WebApiSecurity
             .EnableTokenAcquisitionToCallDownstreamApi()
             .AddInMemoryTokenCaches();
 
-        services.AddScoped<IAuthorizationHeaderProvider, AgenticCredentialsProvider>();
+        if (!string.IsNullOrEmpty(agentScope))
+        {
+            services.AddScoped<IAuthorizationHeaderProvider, AgenticCredentialsProvider>();
+        }
 
         services.Configure<JwtBearerOptions>("Bearer", options =>
         {
@@ -44,8 +49,8 @@ public static class WebApiSecurity
                 RequireSignedTokens = true,
                 ClockSkew = TimeSpan.FromMinutes(5),
             };
-
-            string oidcAuthority = string.IsNullOrEmpty(configuration["AzureAd:AgentScope"])
+                
+            string oidcAuthority = string.IsNullOrEmpty(agentScope)
                 ? "https://login.botframework.com/v1/.well-known/openid-configuration"
                 : $"https://login.microsoftonline.com/{tenantId ?? "botframework.com"}/v2.0/.well-known/openid-configuration";
 

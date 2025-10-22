@@ -14,25 +14,47 @@ public class ConversationClient(IHttpClientFactory httpClientFactory, IAuthoriza
     {
         string? tenantId = configuration["AzureAd:TenantId"];
         //string scope = "https://api.botframework.com/.default";
-        string scope = configuration["AzureAd:AgentScope"] ?? throw new InvalidOperationException("AzureAd:AgentScope");
+        string scope = configuration["AzureAd:AgentScope"] ?? "https://api.botframework.com/.default";
+        activity.From!.Properties.TryGetValue("agenticAppId", out object? agenticAppId);
+        activity.From!.Properties.TryGetValue("agenticUserId", out object? agenticUserId);
 
-        using HttpClient httpClient = httpClientFactory.CreateClient();
-        string token = await tokenProvider!.CreateAuthorizationHeaderForAppAsync(
-            scope,
-            new AuthorizationHeaderProviderOptions() {  
-                AcquireTokenOptions = new () 
-                { 
-                    FmiPath = activity.From!.Properties["agenticAppId"]!.ToString(),
+
+
+        AuthorizationHeaderProviderOptions headerProviderOptions;
+        
+        if (agenticAppId == null || agenticUserId == null)
+        {
+            headerProviderOptions = new();
+
+        }
+        else
+        {
+            headerProviderOptions = new()
+            {
+                AcquireTokenOptions = new()
+                {
                     Tenant = tenantId,
+                    FmiPath = activity.From!.Properties.TryGetValue("agenticAppId", out object? valueid)
+                    ? valueid!.ToString()
+                    : null,
                     ExtraHeadersParameters = new Dictionary<string, string>
                     {
-                        { "x-ms-agentic-user-id", activity.From!.Properties["agenticUserId"]!.ToString()! }
+                        { "x-ms-agentic-user-id", activity.From!.Properties.TryGetValue("agenticUserId", out object? value)
+                            ? value!.ToString()!
+                            : null!
+                        }
                     }
-                } 
-            },
-            cancellationToken);
-        //httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token["Bearer ".Length..]);
+                }
+            };
+        }
+        
+        string token = await tokenProvider!.CreateAuthorizationHeaderForAppAsync(scope, headerProviderOptions, cancellationToken);
+
+
+        using HttpClient httpClient = httpClientFactory.CreateClient();
         httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        //httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token["Bearer ".Length..]);
 
         Uri serviceUri = new(activity.ServiceUrl!);
         string url = $"{serviceUri.Scheme}://{serviceUri.Host}/amer/{tenantId}/v3/conversations/{activity.Conversation!.Id}/activities/";
@@ -42,7 +64,7 @@ public class ConversationClient(IHttpClientFactory httpClientFactory, IAuthoriza
         {
             //File.WriteAllText($"out_act_{activity.Id!}.json", body);
             logger.LogTrace("\n POST {url} \n\n", url);
-            logger.LogTrace("Token Claims : \n {claims}", string.Join("\n ", new JsonWebToken(token).Claims.Select(c => $"{c.Type}: {c.Value}")));
+            // logger.LogTrace("Token Claims : \n {claims}", string.Join("\n ", new JsonWebToken(token).Claims.Select(c => $"{c.Type}: {c.Value}")));
             logger.LogTrace("Body: \n {Body} \n", body);
         }
 
