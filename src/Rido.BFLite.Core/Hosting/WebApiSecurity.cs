@@ -27,7 +27,7 @@ public static class WebApiSecurity
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidIssuers = validTokenIssuers,
-                ValidAudience = configuration[$"{tokenValidationSectionName}:ClientId"],
+                ValidAudiences = [configuration[$"{tokenValidationSectionName}:ClientId"], "https://api.botframework.com"],
                 ValidateAudience = true,
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
