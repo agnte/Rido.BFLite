@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Rido.BFLite.Core.Schema;
+using Rido.BFLite.Core;
 using System.Text.Json;
 
 namespace Rido.BFLite.Core;
@@ -17,24 +18,29 @@ public class ActivityEventArgs(Activity activity) : EventArgs
 public class BotApplication
 {
     private readonly ILogger<BotApplication> _logger;
+    private readonly IConfiguration _configuration;
     private ConversationClient? _conversationClient;
 
     public BotApplication()
     {
         _logger = NullLogger<BotApplication>.Instance;
+        _configuration = new ConfigurationBuilder().Build();
     }
 
     public BotApplication(IConfiguration config, ILogger<BotApplication> logger)
     {
         _logger = logger;
+        _configuration = config;
         logger.LogInformation("Started bot listener on {port} for AppID:{appid}", config["ASPNETCORE_URLS"], config["AzureAd:ClientId"]);
     }
 
     public event EventHandler<ActivityEventArgs>? OnActivity;
 
-    public Action<Activity>? OnMessage { get; set; }
-    public Action<MessageReactionActivityWrapper>? OnMessageReaction { get; set; }
-    public Action<ConversationUpdateActivityWrapper>? OnConversationUpdate { get; set; }
+    public Func<Activity, Task>? OnMessage { get; set; }
+    public Func<MessageReactionActivityWrapper, Task>? OnMessageReaction { get; set; }
+    public Func<ConversationUpdateActivityWrapper, Task>? OnConversationUpdate { get; set; }
+
+    
 
     internal async Task<string> ProcessAsync(HttpContext httpContext)
     {
@@ -47,16 +53,37 @@ public class BotApplication
             switch (activity.Type)
             {
                 case "message":
-                    OnMessage?.Invoke(activity);
-                    _logger.LogInformation("Message activity handled");
+                    if (OnMessage is not null)
+                    {
+                        await OnMessage.Invoke(activity);
+                        _logger.LogTrace("Message activity handled");
+                    }
+                    else
+                    {
+                        _logger.LogTrace("OnMessage handler is not set.");
+                    }
                     break;
                 case "messageReaction":
-                    OnMessageReaction?.Invoke(new MessageReactionActivityWrapper(activity));
-                    _logger.LogInformation("MessageReaction activity handled");
+                    if (OnMessageReaction is not null)
+                    {
+                        await OnMessageReaction.Invoke(new MessageReactionActivityWrapper(activity));
+                        _logger.LogTrace("MessageReaction activity handled");
+                    }
+                    else
+                    {
+                        _logger.LogTrace("OnMessageReaction handler is not set.");
+                    }
                     break;
                 case "conversationUpdate":
-                    OnConversationUpdate?.Invoke(new ConversationUpdateActivityWrapper(activity));
-                    _logger.LogInformation("ConversationUpdate activity handled");
+                    if (OnConversationUpdate is not null)
+                    {
+                        await OnConversationUpdate.Invoke(new ConversationUpdateActivityWrapper(activity));
+                        _logger.LogTrace("ConversationUpdate activity handled");
+                    }
+                    else
+                    {
+                        _logger.LogTrace("OnConversationUpdate handler is not set.");
+                    }
                     break;
                 default:
                     _logger.LogInformation("Activity {Type} not handled", activity.Type);
@@ -93,4 +120,12 @@ public class BotApplication
         }
         return await _conversationClient.SendActivityAsync(activity);
     }
+
+    //public async Task<string> CheckConfigAsync()
+    //{
+    //    var agenticCredentialsProvider = new AgenticCredentialsProvider(_configuration);
+    //    var token = await agenticCredentialsProvider.CreateAuthorizationHeaderForAppAsync(_configuration["AzureAd:AgentScope"]!);
+    //    _logger.LogTrace("Acquired Token {Token}", token);
+    //    return token;
+    //}
 }

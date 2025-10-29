@@ -1,31 +1,55 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Identity.Abstractions;
+using Microsoft.Identity.Web;
+using Microsoft.IdentityModel.JsonWebTokens;
 using Rido.BFLite.Core.Schema;
 using System.Net.Http.Headers;
 using System.Text;
 
 namespace Rido.BFLite.Core;
 
-public class ConversationClient(IHttpClientFactory httpClientFactory, IAuthorizationHeaderProvider tokenProvider, ILogger<ConversationClient> logger, IConfiguration configuration)
+public class ConversationClient(
+    IConfiguration configuration,
+    IHttpClientFactory httpClientFactory,
+    ILogger<ConversationClient>
+    logger, IAuthorizationHeaderProvider authorizationHeaderProvider)
 {
     public async Task<string> SendActivityAsync(Activity activity, CancellationToken cancellationToken = default)
     {
-        string outTenantId = configuration["AzureAD:ClientCredentials:0:TenantId"]!;
-        string scope = "https://api.botframework.com/.default";
-        using HttpClient httpClient = httpClientFactory.CreateClient();
-        string token = await tokenProvider!.CreateAuthorizationHeaderForAppAsync(
-            scope,
-            new AuthorizationHeaderProviderOptions() {  RequestAppToken = true, AcquireTokenOptions = new AcquireTokenOptions() {  Tenant = outTenantId } },
-            cancellationToken);
-        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token["Bearer ".Length..]);
+        string agentScope = configuration["AzureAd:AgentScope"]!;
+        activity.From!.Properties.TryGetValue("agenticAppId", out object? agenticAppId);
+        activity.From!.Properties.TryGetValue("agenticUserId", out object? agenticUserId);
+        activity.From!.Properties.TryGetValue("tenantId", out object? tenantId);
 
-        Uri serviceUri = new(activity.ServiceUrl!);
-        string url = $"{serviceUri.Scheme}://{serviceUri.Host}/v3/conversations/{activity.Conversation!.Id}/activities";
+        using HttpClient httpClient = httpClientFactory.CreateClient();
+        AuthorizationHeaderProviderOptions options = new AuthorizationHeaderProviderOptions();
+        string token;
+        if (agentScope != "https://api.botframework.com/.default" && agenticAppId is not null && agenticUserId is not null)
+        {
+            options.WithAgentUserIdentity(agenticAppId.ToString()!, Guid.Parse(agenticUserId.ToString()!));
+            token = await authorizationHeaderProvider.CreateAuthorizationHeaderAsync([agentScope], options, null, cancellationToken);
+        }
+        else
+        {
+            token = await authorizationHeaderProvider.CreateAuthorizationHeaderForAppAsync(agentScope, options, cancellationToken);
+        }
+
+        string tokenValue = token["Bearer ".Length..];
+        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokenValue);
+
+        string url = $"{activity.ServiceUrl!}v3/conversations/{activity.Conversation!.Id}/activities/";
         string body = activity.ToJson();
 
-        //File.WriteAllText($"out_act_{activity.Id!}.json", body);
-        logger.LogTrace("Sending response to \n POST {url} \n\n {body} \n\n", url, body);
+        if (logger.IsEnabled(LogLevel.Trace))
+        {
+            var jsonWebToken = new JsonWebToken(tokenValue);
+
+            // File.WriteAllText($"out_act_{activity.Id!}.json", body);
+            logger.LogTrace("\n POST {url} \n\n", url);
+            logger.LogTrace("Token Claims : \n {claims}", string.Join("\n ", jsonWebToken.Claims.Select(c => $"{c.Type}: {c.Value}")));
+            logger.LogTrace("Body: \n {Body} \n", body);
+        }
 
         using HttpResponseMessage resp = await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Post, url)
         {
