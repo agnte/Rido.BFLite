@@ -9,9 +9,12 @@ using System.Text;
 
 namespace Rido.BFLite.Core;
 
-public class ConversationClient(IHttpClientFactory httpClientFactory, IAuthorizationHeaderProvider authorizationHeaderProvider, ILogger<ConversationClient> logger, IConfiguration configuration)
+public class ConversationClient(
+    IConfiguration configuration,
+    IHttpClientFactory httpClientFactory,
+    ILogger<ConversationClient>
+    logger, IAuthorizationHeaderProvider authorizationHeaderProvider)
 {
-    string tenantId = configuration["AzureAd:AgentTenantId"]!;
     public async Task<string> SendActivityAsync(Activity activity, CancellationToken cancellationToken = default)
     {
         string agentScope = configuration["AzureAd:AgentScope"]!;
