@@ -85,7 +85,7 @@ public class BotApplication
         return activity;
     }
 
-    public async Task<string> SendActivityAsync(Activity activity)
+    public async Task<ResourceResponse> SendActivityAsync(Activity activity)
     {
         if (_conversationClient is null)
         {
