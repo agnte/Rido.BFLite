@@ -153,7 +153,7 @@ classDiagram
         +OnMessageReaction Action~MessageReactionActivityWrapper~
         +OnConversationUpdate Action~ConversationUpdateActivityWrapper~
         +ProcessAsync(HttpContext) Task~string~
-        +SendActivityAsync(Activity) Task~string~
+        +SendActivityAsync(Activity) Task~ResourceResponse~
     }
 
     class TeamsBotApplication {
@@ -164,7 +164,15 @@ classDiagram
         -IHttpClientFactory httpClientFactory
         -IAuthorizationHeaderProvider tokenProvider
         -ILogger logger
-        +SendActivityAsync(Activity, CancellationToken) Task~string~
+        +SendActivityAsync(Activity, CancellationToken) Task~ResourceResponse~
+        +ReplyToActivityAsync(Activity, string, CancellationToken) Task~ResourceResponse~
+        +UpdateActivityAsync(Activity, CancellationToken) Task~ResourceResponse~
+        +DeleteActivityAsync(string, string, string, CancellationToken) Task
+        +CreateConversationAsync(string, ConversationParameters, CancellationToken) Task~ConversationResourceResponse~
+        +GetConversationMembersAsync(string, string, CancellationToken) Task~List~ConversationAccount~~
+        +GetConversationPagedMembersAsync(string, string, int?, string?, CancellationToken) Task~PagedMembersResult~
+        +GetActivityMembersAsync(string, string, string, CancellationToken) Task~List~ConversationAccount~~
+        +UploadAttachmentAsync(string, string, object, CancellationToken) Task~ResourceResponse~
     }
 
     class Activity~T~ {
@@ -630,6 +638,129 @@ graph TB
     style TCD fill:#fff4e1
     style ED1 fill:#f5e1ff
 ```
+
+## ConversationClient API Methods
+
+The `ConversationClient` provides a comprehensive implementation of the Bot Framework REST Connector API v3, following the same JWT authentication pattern throughout. All methods use the `IAuthorizationHeaderProvider` to acquire tokens for authenticating with the Bot Framework Service.
+
+### Core Methods
+
+#### SendActivityAsync
+Sends an activity (message) to a conversation. This is the primary method for sending messages to users.
+
+```csharp
+Task<ResourceResponse> SendActivityAsync(Activity activity, CancellationToken cancellationToken = default)
+```
+
+**Endpoint:** `POST /v3/conversations/{conversationId}/activities`
+
+**Returns:** `ResourceResponse` containing the ID of the sent activity.
+
+#### ReplyToActivityAsync
+Sends a reply to a specific activity within a conversation. Useful for threaded conversations and maintaining context.
+
+```csharp
+Task<ResourceResponse> ReplyToActivityAsync(Activity activity, string replyToId, CancellationToken cancellationToken = default)
+```
+
+**Endpoint:** `POST /v3/conversations/{conversationId}/activities/{activityId}`
+
+**Returns:** `ResourceResponse` containing the ID of the reply activity.
+
+#### UpdateActivityAsync
+Updates an existing activity (typically a message sent by the bot). The activity must include its ID.
+
+```csharp
+Task<ResourceResponse> UpdateActivityAsync(Activity activity, CancellationToken cancellationToken = default)
+```
+
+**Endpoint:** `PUT /v3/conversations/{conversationId}/activities/{activityId}`
+
+**Returns:** `ResourceResponse` with the updated activity ID.
+
+#### DeleteActivityAsync
+Deletes a specific activity from a conversation.
+
+```csharp
+Task DeleteActivityAsync(string serviceUrl, string conversationId, string activityId, CancellationToken cancellationToken = default)
+```
+
+**Endpoint:** `DELETE /v3/conversations/{conversationId}/activities/{activityId}`
+
+### Conversation Management
+
+#### CreateConversationAsync
+Creates a new conversation with specified parameters. Useful for proactive messaging scenarios.
+
+```csharp
+Task<ConversationResourceResponse> CreateConversationAsync(string serviceUrl, ConversationParameters parameters, CancellationToken cancellationToken = default)
+```
+
+**Endpoint:** `POST /v3/conversations`
+
+**Parameters:** Include bot, members, topic name, and optional initial activity.
+
+**Returns:** `ConversationResourceResponse` containing the new conversation ID and optional activity ID.
+
+### Member Management
+
+#### GetConversationMembersAsync
+Retrieves all members of a conversation.
+
+```csharp
+Task<List<ConversationAccount>> GetConversationMembersAsync(string serviceUrl, string conversationId, CancellationToken cancellationToken = default)
+```
+
+**Endpoint:** `GET /v3/conversations/{conversationId}/members`
+
+**Returns:** List of `ConversationAccount` objects representing conversation members.
+
+#### GetConversationPagedMembersAsync
+Retrieves conversation members with pagination support for large groups.
+
+```csharp
+Task<PagedMembersResult> GetConversationPagedMembersAsync(string serviceUrl, string conversationId, int? pageSize = null, string? continuationToken = null, CancellationToken cancellationToken = default)
+```
+
+**Endpoint:** `GET /v3/conversations/{conversationId}/pagedmembers?pageSize={n}&continuationToken={token}`
+
+**Returns:** `PagedMembersResult` with members and optional continuation token for next page.
+
+#### GetActivityMembersAsync
+Retrieves members who participated in a specific activity.
+
+```csharp
+Task<List<ConversationAccount>> GetActivityMembersAsync(string serviceUrl, string conversationId, string activityId, CancellationToken cancellationToken = default)
+```
+
+**Endpoint:** `GET /v3/conversations/{conversationId}/activities/{activityId}/members`
+
+**Returns:** List of `ConversationAccount` objects for activity participants.
+
+### Attachment Management
+
+#### UploadAttachmentAsync
+Uploads an attachment to a conversation.
+
+```csharp
+Task<ResourceResponse> UploadAttachmentAsync(string serviceUrl, string conversationId, object attachmentUpload, CancellationToken cancellationToken = default)
+```
+
+**Endpoint:** `POST /v3/conversations/{conversationId}/attachments`
+
+**Returns:** `ResourceResponse` containing the uploaded attachment ID.
+
+### Authentication Pattern
+
+All methods follow the same authentication pattern:
+
+1. Acquire JWT token from Microsoft Identity Platform using `IAuthorizationHeaderProvider`
+2. Set scope to `https://api.botframework.com/.default`
+3. Include tenant ID from configuration
+4. Add token to HTTP request as Bearer authentication header
+5. Make REST API call to Bot Framework Service
+
+This ensures consistent, secure authentication across all Bot Framework API operations.
 
 ## Key Design Patterns
 

@@ -126,15 +126,65 @@ botApp.OnNewActivity += (sender, args) =>
 };
 ```
 
+### Advanced ConversationClient Usage
+
+For advanced scenarios, inject `ConversationClient` directly:
+
+```csharp
+// Update a previously sent message
+ResourceResponse originalResponse = await botApp.SendActivityAsync(message);
+message.Id = originalResponse.Id;
+message.Text = "Updated message text";
+await conversationClient.UpdateActivityAsync(message);
+
+// Delete a message
+await conversationClient.DeleteActivityAsync(
+    serviceUrl: activity.ServiceUrl,
+    conversationId: activity.Conversation.Id,
+    activityId: activityIdToDelete);
+
+// Create a proactive conversation
+var parameters = new ConversationParameters
+{
+    Bot = new ConversationAccount { Id = botId, Name = "My Bot" },
+    Members = new List<ConversationAccount>
+    {
+        new ConversationAccount { Id = userId, Name = "User" }
+    },
+    TopicName = "Proactive Message"
+};
+ConversationResourceResponse conversation = await conversationClient.CreateConversationAsync(
+    serviceUrl, parameters);
+
+// Get conversation members with pagination
+PagedMembersResult members = await conversationClient.GetConversationPagedMembersAsync(
+    serviceUrl, conversationId, pageSize: 50);
+```
+
 ## Architecture
 
 The library consists of:
 
 - **BotApplication**: Base class for bot applications
 - **TeamsBotApplication**: Extended bot application with Teams-specific features
-- **ConversationClient**: HTTP client for sending activities to Bot Framework
+- **ConversationClient**: Complete implementation of Bot Framework REST Connector API v3, supporting all conversation operations with JWT authentication
 - **Activity Schema**: Strongly-typed models for Bot Framework activities
 - **Hosting Extensions**: ASP.NET Core integration and authentication
+
+### ConversationClient Features
+
+The `ConversationClient` provides comprehensive Bot Framework REST API v3 support:
+
+- **Send Activities**: Send messages to conversations
+- **Reply to Activities**: Send threaded replies to specific messages
+- **Update Activities**: Edit previously sent messages
+- **Delete Activities**: Remove messages from conversations
+- **Create Conversations**: Start new conversations for proactive messaging
+- **Get Members**: Retrieve conversation and activity participants
+- **Paged Members**: Efficiently handle large group memberships with pagination
+- **Upload Attachments**: Send files and rich media
+
+All operations use secure JWT token authentication via Microsoft Identity Platform.
 
 For detailed architecture diagrams and explanations, see the [Architecture Documentation](docs/ARCHITECTURE.md).
 
