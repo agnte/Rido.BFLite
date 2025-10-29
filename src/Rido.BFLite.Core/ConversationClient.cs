@@ -17,7 +17,8 @@ public class ConversationClient(IHttpClientFactory httpClientFactory, IAuthoriza
         string agentScope = configuration["AzureAd:AgentScope"]!;
         activity.From!.Properties.TryGetValue("agenticAppId", out object? agenticAppId);
         activity.From!.Properties.TryGetValue("agenticUserId", out object? agenticUserId);
-        
+        activity.From!.Properties.TryGetValue("tenantId", out object? tenantId);
+
         using HttpClient httpClient = httpClientFactory.CreateClient();
         AuthorizationHeaderProviderOptions options = new AuthorizationHeaderProviderOptions();
         string token;
@@ -31,19 +32,17 @@ public class ConversationClient(IHttpClientFactory httpClientFactory, IAuthoriza
             token = await authorizationHeaderProvider.CreateAuthorizationHeaderForAppAsync(agentScope, options, cancellationToken);
         }
 
-
         string tokenValue = token["Bearer ".Length..];
         httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokenValue);
 
-        Uri serviceUri = new(activity.ServiceUrl!);
-        string url = $"{serviceUri.Scheme}://{serviceUri.Host}/amer/{tenantId}/v3/conversations/{activity.Conversation!.Id}/activities/";
+        string url = $"{activity.ServiceUrl!}v3/conversations/{activity.Conversation!.Id}/activities/";
         string body = activity.ToJson();
 
         if (logger.IsEnabled(LogLevel.Trace))
         {
             var jsonWebToken = new JsonWebToken(tokenValue);
 
-            //File.WriteAllText($"out_act_{activity.Id!}.json", body);
+            // File.WriteAllText($"out_act_{activity.Id!}.json", body);
             logger.LogTrace("\n POST {url} \n\n", url);
             logger.LogTrace("Token Claims : \n {claims}", string.Join("\n ", jsonWebToken.Claims.Select(c => $"{c.Type}: {c.Value}")));
             logger.LogTrace("Body: \n {Body} \n", body);
