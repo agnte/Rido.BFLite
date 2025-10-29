@@ -8,11 +8,12 @@
 		<AnalysisLevel>latest-minimum</AnalysisLevel>
 	</PropertyGroup>
 	<ItemGroup>
-		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.9" NoWarn="NU1605" />
-		<PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="9.0.9" NoWarn="NU1605" />
-		<PackageReference Include="Microsoft.Identity.Web.DownstreamApi" Version="3.14.1" />
-		<PackageReference Include="Microsoft.Identity.Web.MicrosoftGraph" Version="3.14.1" />
-		<PackageReference Include="Microsoft.Identity.Web.UI" Version="3.14.1" />
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.10" NoWarn="NU1605" />
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="9.0.10" NoWarn="NU1605" />
+		<PackageReference Include="Microsoft.Identity.Web.DownstreamApi" Version="4.0.1" />
+		<PackageReference Include="Microsoft.Identity.Web.MicrosoftGraph" Version="4.0.1" />
+		<PackageReference Include="Microsoft.Identity.Web.UI" Version="4.0.1" />
+		<PackageReference Include="Microsoft.Identity.Web.AgentIdentities" Version="4.0.1" />
 	</ItemGroup>
 	<ItemGroup>
 		<Using Include="System.Text.Json.Serialization" />

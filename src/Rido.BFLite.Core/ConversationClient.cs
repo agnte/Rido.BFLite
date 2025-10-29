@@ -1,6 +1,8 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Identity.Abstractions;
+using Microsoft.Identity.Web;
+using Microsoft.IdentityModel.JsonWebTokens;
 using Rido.BFLite.Core.Schema;
 using System.Net.Http.Headers;
 using System.Text;
@@ -8,27 +10,49 @@ using System.Text.Json;
 
 namespace Rido.BFLite.Core;
 
-public class ConversationClient(IHttpClientFactory httpClientFactory, IAuthorizationHeaderProvider tokenProvider, ILogger<ConversationClient> logger, IConfiguration configuration)
+public class ConversationClient(
+    IConfiguration configuration,
+    IHttpClientFactory httpClientFactory,
+    ILogger<ConversationClient>
+    logger, IAuthorizationHeaderProvider authorizationHeaderProvider)
 {
-    private async Task<HttpClient> CreateAuthenticatedHttpClientAsync(CancellationToken cancellationToken = default)
+    private async Task<HttpClient> CreateAuthenticatedHttpClientAsync(Activity activity, CancellationToken cancellationToken = default)
     {
-        string outTenantId = configuration["AzureAD:ClientCredentials:0:TenantId"]!;
-        string scope = "https://api.botframework.com/.default";
-        HttpClient httpClient = httpClientFactory.CreateClient();
-        string token = await tokenProvider!.CreateAuthorizationHeaderForAppAsync(
-            scope,
-            new AuthorizationHeaderProviderOptions() { RequestAppToken = true, AcquireTokenOptions = new AcquireTokenOptions() { Tenant = outTenantId } },
-            cancellationToken);
-        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token["Bearer ".Length..]);
+        string agentScope = configuration["AzureAd:AgentScope"]!;
+        activity.From!.Properties.TryGetValue("agenticAppId", out object? agenticAppId);
+        activity.From!.Properties.TryGetValue("agenticUserId", out object? agenticUserId);
+        activity.From!.Properties.TryGetValue("tenantId", out object? tenantId);
+
+        using HttpClient httpClient = httpClientFactory.CreateClient();
+        AuthorizationHeaderProviderOptions options = new AuthorizationHeaderProviderOptions();
+        string token;
+        if (agentScope != "https://api.botframework.com/.default" && agenticAppId is not null && agenticUserId is not null)
+        {
+            options.WithAgentUserIdentity(agenticAppId.ToString()!, Guid.Parse(agenticUserId.ToString()!));
+            token = await authorizationHeaderProvider.CreateAuthorizationHeaderAsync([agentScope], options, null, cancellationToken);
+        }
+        else
+        {
+            token = await authorizationHeaderProvider.CreateAuthorizationHeaderForAppAsync(agentScope, options, cancellationToken);
+        }
+
+        string tokenValue = token["Bearer ".Length..];
+        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokenValue);
+
+        if (logger.IsEnabled(LogLevel.Trace))
+        {
+            var jsonWebToken = new JsonWebToken(tokenValue);
+            logger.LogTrace("Token Claims : \n {claims}", string.Join("\n ", jsonWebToken.Claims.Select(c => $"{c.Type}: {c.Value}")));
+        }
+
         return httpClient;
     }
 
     public async Task<ResourceResponse> SendActivityAsync(Activity activity, CancellationToken cancellationToken = default)
     {
-        using HttpClient httpClient = await CreateAuthenticatedHttpClientAsync(cancellationToken);
+        using HttpClient httpClient = await CreateAuthenticatedHttpClientAsync(activity, cancellationToken);
 
-        Uri serviceUri = new(activity.ServiceUrl!);
-        string url = $"{serviceUri.Scheme}://{serviceUri.Host}/v3/conversations/{activity.Conversation!.Id}/activities";
+        string url = $"{activity.ServiceUrl!}v3/conversations/{activity.Conversation!.Id}/activities/";
         string body = activity.ToJson();
 
         logger.LogTrace("Sending response to \n POST {url} \n\n {body} \n\n", url, body);
@@ -51,7 +75,7 @@ public class ConversationClient(IHttpClientFactory httpClientFactory, IAuthoriza
 
     public async Task<ResourceResponse> ReplyToActivityAsync(Activity activity, string replyToId, CancellationToken cancellationToken = default)
     {
-        using HttpClient httpClient = await CreateAuthenticatedHttpClientAsync(cancellationToken);
+        using HttpClient httpClient = await CreateAuthenticatedHttpClientAsync(activity, cancellationToken);
 
         Uri serviceUri = new(activity.ServiceUrl!);
         string url = $"{serviceUri.Scheme}://{serviceUri.Host}/v3/conversations/{activity.Conversation!.Id}/activities/{replyToId}";
@@ -77,7 +101,7 @@ public class ConversationClient(IHttpClientFactory httpClientFactory, IAuthoriza
 
     public async Task<ResourceResponse> UpdateActivityAsync(Activity activity, CancellationToken cancellationToken = default)
     {
-        using HttpClient httpClient = await CreateAuthenticatedHttpClientAsync(cancellationToken);
+        using HttpClient httpClient = await CreateAuthenticatedHttpClientAsync(activity, cancellationToken);
 
         Uri serviceUri = new(activity.ServiceUrl!);
         string url = $"{serviceUri.Scheme}://{serviceUri.Host}/v3/conversations/{activity.Conversation!.Id}/activities/{activity.Id}";
@@ -101,12 +125,12 @@ public class ConversationClient(IHttpClientFactory httpClientFactory, IAuthoriza
         return JsonSerializer.Deserialize<ResourceResponse>(respContent, Activity.DefaultJsonOptions) ?? new ResourceResponse();
     }
 
-    public async Task DeleteActivityAsync(string serviceUrl, string conversationId, string activityId, CancellationToken cancellationToken = default)
+    public async Task<ResourceResponse> DeleteActivityAsync(Activity activity, string activityId, CancellationToken cancellationToken = default)
     {
-        using HttpClient httpClient = await CreateAuthenticatedHttpClientAsync(cancellationToken);
+        using HttpClient httpClient = await CreateAuthenticatedHttpClientAsync(activity, cancellationToken);
 
-        Uri serviceUri = new(serviceUrl);
-        string url = $"{serviceUri.Scheme}://{serviceUri.Host}/v3/conversations/{conversationId}/activities/{activityId}";
+        Uri serviceUri = new(activity.ServiceUrl!);
+        string url = $"{serviceUri.Scheme}://{serviceUri.Host}/v3/conversations/{activity.Conversation!.Id}/activities/{activityId}";
 
         logger.LogTrace("Deleting activity at \n DELETE {url}", url);
 
@@ -119,13 +143,15 @@ public class ConversationClient(IHttpClientFactory httpClientFactory, IAuthoriza
         {
             throw new Exception($"Error deleting activity: {resp.StatusCode} - {respContent}");
         }
+
+        return JsonSerializer.Deserialize<ResourceResponse>(respContent, Activity.DefaultJsonOptions) ?? new ResourceResponse();
     }
 
-    public async Task<ConversationResourceResponse> CreateConversationAsync(string serviceUrl, ConversationParameters parameters, CancellationToken cancellationToken = default)
+    public async Task<ConversationResourceResponse> CreateConversationAsync(Activity activity, ConversationParameters parameters, CancellationToken cancellationToken = default)
     {
-        using HttpClient httpClient = await CreateAuthenticatedHttpClientAsync(cancellationToken);
+        using HttpClient httpClient = await CreateAuthenticatedHttpClientAsync(activity, cancellationToken);
 
-        Uri serviceUri = new(serviceUrl);
+        Uri serviceUri = new(activity.ServiceUrl!);
         string url = $"{serviceUri.Scheme}://{serviceUri.Host}/v3/conversations";
         string body = JsonSerializer.Serialize(parameters, Activity.DefaultJsonOptions);
 
@@ -147,12 +173,12 @@ public class ConversationClient(IHttpClientFactory httpClientFactory, IAuthoriza
         return JsonSerializer.Deserialize<ConversationResourceResponse>(respContent, Activity.DefaultJsonOptions) ?? new ConversationResourceResponse();
     }
 
-    public async Task<List<ConversationAccount>> GetConversationMembersAsync(string serviceUrl, string conversationId, CancellationToken cancellationToken = default)
+    public async Task<List<ConversationAccount>> GetConversationMembersAsync(Activity activity, CancellationToken cancellationToken = default)
     {
-        using HttpClient httpClient = await CreateAuthenticatedHttpClientAsync(cancellationToken);
+        using HttpClient httpClient = await CreateAuthenticatedHttpClientAsync(activity, cancellationToken);
 
-        Uri serviceUri = new(serviceUrl);
-        string url = $"{serviceUri.Scheme}://{serviceUri.Host}/v3/conversations/{conversationId}/members";
+        Uri serviceUri = new(activity.ServiceUrl!);
+        string url = $"{serviceUri.Scheme}://{serviceUri.Host}/v3/conversations/{activity.Conversation!.Id}/members";
 
         logger.LogTrace("Getting conversation members at \n GET {url}", url);
 
@@ -169,11 +195,11 @@ public class ConversationClient(IHttpClientFactory httpClientFactory, IAuthoriza
         return JsonSerializer.Deserialize<List<ConversationAccount>>(respContent, Activity.DefaultJsonOptions) ?? new List<ConversationAccount>();
     }
 
-    public async Task<PagedMembersResult> GetConversationPagedMembersAsync(string serviceUrl, string conversationId, int? pageSize = null, string? continuationToken = null, CancellationToken cancellationToken = default)
+    public async Task<PagedMembersResult> GetConversationPagedMembersAsync(Activity activity, int? pageSize = null, string? continuationToken = null, CancellationToken cancellationToken = default)
     {
-        using HttpClient httpClient = await CreateAuthenticatedHttpClientAsync(cancellationToken);
+        using HttpClient httpClient = await CreateAuthenticatedHttpClientAsync(activity, cancellationToken);
 
-        Uri serviceUri = new(serviceUrl);
+        Uri serviceUri = new(activity.ServiceUrl!);
         string queryParams = "";
         if (pageSize.HasValue || !string.IsNullOrEmpty(continuationToken))
         {
@@ -188,7 +214,7 @@ public class ConversationClient(IHttpClientFactory httpClientFactory, IAuthoriza
             }
             queryParams = "?" + string.Join("&", queryParts);
         }
-        string url = $"{serviceUri.Scheme}://{serviceUri.Host}/v3/conversations/{conversationId}/pagedmembers{queryParams}";
+        string url = $"{serviceUri.Scheme}://{serviceUri.Host}/v3/conversations/{activity.Conversation!.Id}/pagedmembers{queryParams}";
 
         logger.LogTrace("Getting paged conversation members at \n GET {url}", url);
 
@@ -205,12 +231,12 @@ public class ConversationClient(IHttpClientFactory httpClientFactory, IAuthoriza
         return JsonSerializer.Deserialize<PagedMembersResult>(respContent, Activity.DefaultJsonOptions) ?? new PagedMembersResult();
     }
 
-    public async Task<List<ConversationAccount>> GetActivityMembersAsync(string serviceUrl, string conversationId, string activityId, CancellationToken cancellationToken = default)
+    public async Task<List<ConversationAccount>> GetActivityMembersAsync(Activity activity, string activityId, CancellationToken cancellationToken = default)
     {
-        using HttpClient httpClient = await CreateAuthenticatedHttpClientAsync(cancellationToken);
+        using HttpClient httpClient = await CreateAuthenticatedHttpClientAsync(activity, cancellationToken);
 
-        Uri serviceUri = new(serviceUrl);
-        string url = $"{serviceUri.Scheme}://{serviceUri.Host}/v3/conversations/{conversationId}/activities/{activityId}/members";
+        Uri serviceUri = new(activity.ServiceUrl!);
+        string url = $"{serviceUri.Scheme}://{serviceUri.Host}/v3/conversations/{activity.Conversation!.Id}/activities/{activityId}/members";
 
         logger.LogTrace("Getting activity members at \n GET {url}", url);
 
@@ -227,12 +253,12 @@ public class ConversationClient(IHttpClientFactory httpClientFactory, IAuthoriza
         return JsonSerializer.Deserialize<List<ConversationAccount>>(respContent, Activity.DefaultJsonOptions) ?? new List<ConversationAccount>();
     }
 
-    public async Task<ResourceResponse> UploadAttachmentAsync(string serviceUrl, string conversationId, object attachmentUpload, CancellationToken cancellationToken = default)
+    public async Task<ResourceResponse> UploadAttachmentAsync(Activity activity, object attachmentUpload, CancellationToken cancellationToken = default)
     {
-        using HttpClient httpClient = await CreateAuthenticatedHttpClientAsync(cancellationToken);
+        using HttpClient httpClient = await CreateAuthenticatedHttpClientAsync(activity, cancellationToken);
 
-        Uri serviceUri = new(serviceUrl);
-        string url = $"{serviceUri.Scheme}://{serviceUri.Host}/v3/conversations/{conversationId}/attachments";
+        Uri serviceUri = new(activity.ServiceUrl!);
+        string url = $"{serviceUri.Scheme}://{serviceUri.Host}/v3/conversations/{activity.Conversation!.Id}/attachments";
         string body = JsonSerializer.Serialize(attachmentUpload, Activity.DefaultJsonOptions);
 
         logger.LogTrace("Uploading attachment at \n POST {url} \n\n {body} \n\n", url, body);
