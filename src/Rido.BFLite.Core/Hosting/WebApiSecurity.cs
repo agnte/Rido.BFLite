@@ -74,7 +74,7 @@ public static class WebApiSecurity
                 ClockSkew = TimeSpan.FromMinutes(5),
             };
 
-            string oidcAuthority = agentScope!.Equals("https://api.botframework.com/.default", StringComparison.OrdinalIgnoreCase)
+            string oidcAuthority = agentScope is null || agentScope!.Equals("https://api.botframework.com/.default", StringComparison.OrdinalIgnoreCase)
                 ? "https://login.botframework.com/v1/.well-known/openid-configuration"
                 : $"https://login.microsoftonline.com/{tenantId ?? "botframework.com"}/v2.0/.well-known/openid-configuration";
 
