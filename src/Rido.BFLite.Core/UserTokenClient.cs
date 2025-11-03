@@ -133,7 +133,7 @@ public class UserTokenClient(
         //}
 
         var json = await CallApiAsync("api/usertoken/GetTokenOrSignInResource", queryParams);
-        var result = JsonSerializer.Deserialize<IUserTokenClient.GetSignInResourceResult>(json, _defaultOptions)!;
+        var result = JsonSerializer.Deserialize<IUserTokenClient.GetSignInResourceResult>(json!, _defaultOptions)!;
         return result;
     }
 
@@ -224,12 +224,7 @@ public class UserTokenClient(
         {
             // Capture the authorization header provider reference at the start of the method
             // to avoid accessing it after potential scope disposal
-            var currentAuthProvider = authorizationHeaderProvider;
-            if (currentAuthProvider == null)
-            {
-                throw new ObjectDisposedException(nameof(IAuthorizationHeaderProvider), "Authorization header provider is not available.");
-            }
-
+            var currentAuthProvider = authorizationHeaderProvider ?? throw new ObjectDisposedException(nameof(IAuthorizationHeaderProvider), "Authorization header provider is not available.");
             var authHeader = await currentAuthProvider.CreateAuthorizationHeaderForAppAsync(_scopes);
             var httpClient = httpClientFactory.CreateClient("ApiClient");
             httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", authHeader);
@@ -289,11 +284,7 @@ public class UserTokenClient(
         {
             // Capture the authorization header provider reference at the start of the method
             // to avoid accessing it after potential scope disposal
-            var currentAuthProvider = authorizationHeaderProvider;
-            if (currentAuthProvider == null)
-            {
-                throw new ObjectDisposedException(nameof(IAuthorizationHeaderProvider), "Authorization header provider is not available.");
-            }
+            var currentAuthProvider = authorizationHeaderProvider ?? throw new ObjectDisposedException(nameof(IAuthorizationHeaderProvider), "Authorization header provider is not available.");
 
             // Get the authorization header using Microsoft.Identity.Web's built-in provider
             var authHeader = await currentAuthProvider.CreateAuthorizationHeaderForAppAsync(_scopes);
