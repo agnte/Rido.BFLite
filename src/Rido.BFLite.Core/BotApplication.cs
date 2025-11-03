@@ -20,6 +20,7 @@ public class BotApplication
     private readonly ILogger<BotApplication> _logger;
     private readonly IConfiguration _configuration;
     private ConversationClient? _conversationClient;
+    private UserTokenClient? _userTokenClient;
 
     public BotApplication()
     {
@@ -34,6 +35,8 @@ public class BotApplication
         logger.LogInformation("Started bot listener on {port} for AppID:{appid}", config["ASPNETCORE_URLS"], config["AzureAd:ClientId"]);
     }
 
+    public UserTokenClient UserTokenClient => _userTokenClient ?? throw new Exception("UserTokenClient not initialized");
+
     public event EventHandler<ActivityEventArgs>? OnActivity;
 
     public Func<Activity, Task>? OnMessage { get; set; }
@@ -45,6 +48,7 @@ public class BotApplication
     internal async Task<string> ProcessAsync(HttpContext httpContext)
     {
         _conversationClient = httpContext.RequestServices.GetService<ConversationClient>() ?? throw new Exception("ConversationClient not registered");
+        _userTokenClient = httpContext.RequestServices.GetService<UserTokenClient>() ?? throw new Exception("UserTokenClient not registered");
         Activity activity = await ParseActivityAsync(httpContext.Request.Body) ?? throw new InvalidOperationException("Invalid Activity");
         using (_logger.BeginScope("Processing activity {Type} {Id}", activity.Type, activity.Id))
         {

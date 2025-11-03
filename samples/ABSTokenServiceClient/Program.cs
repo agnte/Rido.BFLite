@@ -1,28 +1,25 @@
-﻿using ABSTokenServiceClient;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Identity.Abstractions;
 using Microsoft.Identity.Web;
 using Microsoft.Identity.Web.TokenCacheProviders.InMemory;
 using Rido.BFLite.Core;
 
-var builder = WebApplication.CreateBuilder(args);
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddTokenAcquisition(true);
 builder.Services.AddInMemoryTokenCaches();
-builder.Services.AddHttpClient(); 
+builder.Services.AddHttpClient();
 builder.Services.Configure<MicrosoftIdentityApplicationOptions>(builder.Configuration.GetSection("AzureAd"));
 builder.Services.AddSingleton<UserTokenClient>();
-var host = builder.Build();
+WebApplication host = builder.Build();
 ILogger logger = host.Logger;
 await RunTest(host);
 
 async Task RunTest(WebApplication host)
 {
-    var userTokenClient = host.Services.GetRequiredService<UserTokenClient>();
+    UserTokenClient userTokenClient = host.Services.GetRequiredService<UserTokenClient>();
     const string userId = "29:10n4Hk6RsMPuLvAxMNd2zEYU2w1dpvsiLC4QcffJ84rCMp_TKJO_dMzosR4d_K67eAumKyxTzXVYqHQWzRf2ukg";
     const string connectionName = "graph";
     const string channelId = "msteams";
@@ -55,7 +52,7 @@ async Task RunTest(WebApplication host)
 
         Console.WriteLine("Want to signout? y/n");
         string yn = Console.ReadLine()!;
-        if (yn.ToLowerInvariant() == "y")
+        if (yn.Equals("y", StringComparison.InvariantCultureIgnoreCase))
         {
             bool so = await userTokenClient.SignOutUserAsync(userId, connectionName, channelId);
             logger.LogInformation("SignOutUser result: {Result}", so);
