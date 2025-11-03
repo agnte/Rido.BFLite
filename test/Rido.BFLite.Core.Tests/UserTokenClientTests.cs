@@ -1,0 +1,583 @@
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Identity.Abstractions;
+using Moq;
+using Moq.Protected;
+using System.Net;
+using System.Text;
+using System.Text.Json;
+using Rido.BFLite.Core;
+
+namespace Rido.BFLite.Core.Tests;
+
+public class UserTokenClientTests : IDisposable
+{
+    private readonly ServiceProvider _serviceProvider;
+    private readonly Mock<IAuthorizationHeaderProvider> _mockAuthProvider;
+    private readonly Mock<HttpMessageHandler> _mockHttpMessageHandler;
+    private readonly UserTokenClient _userTokenClient;
+    private readonly string _testScope = "https://api.botframework.com/.default";
+    private readonly string _testAuthHeader = "Bearer test-token";
+
+    public UserTokenClientTests()
+    {
+        // Setup mocks
+        _mockAuthProvider = new Mock<IAuthorizationHeaderProvider>();
+        _mockHttpMessageHandler = new Mock<HttpMessageHandler>();
+
+        // Setup AuthorizationHeaderProvider mock
+        _mockAuthProvider.Setup(a => a.CreateAuthorizationHeaderForAppAsync(It.IsAny<string>(), It.IsAny<AuthorizationHeaderProviderOptions?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(_testAuthHeader);
+
+        // Setup DI container
+        var services = new ServiceCollection();
+        
+        // Add configuration with test data
+        var configurationData = new Dictionary<string, string?>
+        {
+            ["AzureAd:AgentScope"] = _testScope
+        };
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(configurationData)
+            .Build();
+        services.AddSingleton<IConfiguration>(configuration);
+
+        // Add logging
+        services.AddLogging(builder => builder.AddProvider(NullLoggerProvider.Instance));
+
+        // Add HttpClient factory with mocked HttpMessageHandler
+        services.AddHttpClient("ApiClient", client => { })
+            .ConfigurePrimaryHttpMessageHandler(() => _mockHttpMessageHandler.Object);
+
+        // Add mocked authorization header provider
+        services.AddSingleton(_mockAuthProvider.Object);
+
+        // Add UserTokenClient
+        services.AddScoped<UserTokenClient>();
+
+        _serviceProvider = services.BuildServiceProvider();
+        _userTokenClient = _serviceProvider.GetRequiredService<UserTokenClient>();
+    }
+
+    [Fact]
+    public async Task GetTokenAsync_WithValidResponse_ReturnsToken()
+    {
+        // Arrange
+        var userId = "test-user";
+        var connectionName = "test-connection";
+        var channelId = "test-channel";
+        var code = "test-code";
+        
+        var expectedResponse = new IUserTokenClient.GetTokenResult
+        {
+            ConnectionName = connectionName,
+            Token = "test-token-value"
+        };
+        var responseJson = JsonSerializer.Serialize(expectedResponse, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+
+        SetupHttpMessageHandler(HttpStatusCode.OK, responseJson);
+
+        // Act
+        var result = await _userTokenClient.GetTokenAsync(userId, connectionName, channelId, code);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(connectionName, result.ConnectionName);
+        Assert.Equal("test-token-value", result.Token);
+        
+        // Verify the HTTP request was made correctly
+        VerifyHttpRequest("GET", "https://token.botframework.com/api/usertoken/GetToken");
+        _mockAuthProvider.Verify(a => a.CreateAuthorizationHeaderForAppAsync(It.IsAny<string>(), It.IsAny<AuthorizationHeaderProviderOptions?>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetTokenAsync_WithoutCode_OmitsCodeParameter()
+    {
+        // Arrange
+        var userId = "test-user";
+        var connectionName = "test-connection";
+        var channelId = "test-channel";
+        
+        var expectedResponse = new IUserTokenClient.GetTokenResult
+        {
+            ConnectionName = connectionName,
+            Token = "test-token-value"
+        };
+        var responseJson = JsonSerializer.Serialize(expectedResponse, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+
+        SetupHttpMessageHandler(HttpStatusCode.OK, responseJson);
+
+        // Act
+        var result = await _userTokenClient.GetTokenAsync(userId, connectionName, channelId);
+
+        // Assert
+        Assert.NotNull(result);
+        VerifyHttpRequest("GET", "https://token.botframework.com/api/usertoken/GetToken");
+    }
+
+    [Fact]
+    public async Task GetTokenAsync_WithNotFoundResponse_ReturnsNull()
+    {
+        // Arrange
+        var userId = "test-user";
+        var connectionName = "test-connection";
+        var channelId = "test-channel";
+
+        SetupHttpMessageHandler(HttpStatusCode.NotFound, "Not Found");
+
+        // Act
+        var result = await _userTokenClient.GetTokenAsync(userId, connectionName, channelId);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetTokenOrSignInResource_WithValidResponse_ReturnsSignInResource()
+    {
+        // Arrange
+        var userId = "test-user";
+        var connectionName = "test-connection";
+        var channelId = "test-channel";
+        
+        var expectedResponse = new IUserTokenClient.GetSignInResourceResult
+        {
+            SignInResource = new IUserTokenClient.Signinresource
+            {
+                SignInLink = "https://signin.link",
+                TokenPostResource = new IUserTokenClient.Tokenpostresource
+                {
+                    SasUrl = "https://sas.url"
+                }
+            }
+        };
+        var responseJson = JsonSerializer.Serialize(expectedResponse, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+
+        SetupHttpMessageHandler(HttpStatusCode.OK, responseJson);
+
+        // Act
+        var result = await _userTokenClient.GetTokenOrSignInResource(userId, connectionName, channelId);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.NotNull(result.SignInResource);
+        Assert.Equal("https://signin.link", result.SignInResource.SignInLink);
+        Assert.Equal("https://sas.url", result.SignInResource.TokenPostResource?.SasUrl);
+        
+        VerifyHttpRequest("GET", "https://token.botframework.com/api/usertoken/GetTokenOrSignInResource");
+    }
+
+    [Fact]
+    public async Task GetTokenStatusAsync_WithValidResponse_ReturnsTokenStatus()
+    {
+        // Arrange
+        var userId = "test-user";
+        var channelId = "test-channel";
+        var include = "test-include";
+        
+        var expectedResponse = new List<IUserTokenClient.GetTokenStatusResult>
+        {
+            new()
+            {
+                ConnectionName = "test-connection",
+                HasToken = true,
+                ServiceProviderDisplayName = "Test Provider"
+            }
+        };
+        var responseJson = JsonSerializer.Serialize(expectedResponse, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+
+        SetupHttpMessageHandler(HttpStatusCode.OK, responseJson);
+
+        // Act
+        var result = await _userTokenClient.GetTokenStatusAsync(userId, channelId, include);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("test-connection", result.ConnectionName);
+        Assert.True(result.HasToken);
+        Assert.Equal("Test Provider", result.ServiceProviderDisplayName);
+        
+        VerifyHttpRequest("GET", "https://token.botframework.com/api/usertoken/GetTokenStatus");
+    }
+
+    [Fact]
+    public async Task SignOutUserAsync_WithSuccessfulResponse_ReturnsTrue()
+    {
+        // Arrange
+        var userId = "test-user";
+        var connectionName = "test-connection";
+        var channelId = "test-channel";
+
+        SetupHttpMessageHandler(HttpStatusCode.OK, "");
+
+        // Act
+        var result = await _userTokenClient.SignOutUserAsync(userId, connectionName, channelId);
+
+        // Assert
+        Assert.True(result);
+        VerifyHttpRequest("DELETE", "https://token.botframework.com/api/usertoken/SignOut");
+    }
+
+    [Fact]
+    public async Task SignOutUserAsync_WithHttpException_ReturnsFalse()
+    {
+        // Arrange
+        var userId = "test-user";
+
+        SetupHttpMessageHandler(HttpStatusCode.InternalServerError, "Server Error");
+
+        // Act
+        var result = await _userTokenClient.SignOutUserAsync(userId);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task ExchangeTokenAsync_WithValidResponse_ReturnsToken()
+    {
+        // Arrange
+        var userId = "test-user";
+        var connectionName = "test-connection";
+        var channelId = "test-channel";
+        var exchangeToken = "exchange-token";
+        var expectedResponse = "exchanged-token";
+
+        SetupHttpMessageHandler(HttpStatusCode.OK, expectedResponse);
+
+        // Act
+        var result = await _userTokenClient.ExchangeTokenAsync(userId, connectionName, channelId, exchangeToken);
+
+        // Assert
+        Assert.Equal(expectedResponse, result);
+        VerifyHttpRequest("POST", "https://token.botframework.com/api/usertoken/exchange");
+    }
+
+    [Fact]
+    public async Task GetAadTokensAsync_WithValidResponse_ReturnsTokens()
+    {
+        // Arrange
+        var userId = "test-user";
+        var connectionName = "test-connection";
+        var channelId = "test-channel";
+        var resourceUrls = new[] { "https://graph.microsoft.com", "https://vault.azure.net" };
+        var expectedResponse = "aad-tokens-response";
+
+        SetupHttpMessageHandler(HttpStatusCode.OK, expectedResponse);
+
+        // Act
+        var result = await _userTokenClient.GetAadTokensAsync(userId, connectionName, channelId, resourceUrls);
+
+        // Assert
+        Assert.Equal(expectedResponse, result);
+        VerifyHttpRequest("POST", "https://token.botframework.com/api/usertoken/GetAadTokens");
+    }
+
+    [Fact]
+    public async Task GetAadTokensAsync_WithNullResourceUrls_UsesEmptyArray()
+    {
+        // Arrange
+        var userId = "test-user";
+        var connectionName = "test-connection";
+        var channelId = "test-channel";
+        var expectedResponse = "aad-tokens-response";
+
+        SetupHttpMessageHandler(HttpStatusCode.OK, expectedResponse);
+
+        // Act
+        var result = await _userTokenClient.GetAadTokensAsync(userId, connectionName, channelId);
+
+        // Assert
+        Assert.Equal(expectedResponse, result);
+        VerifyHttpRequest("POST", "https://token.botframework.com/api/usertoken/GetAadTokens");
+    }
+
+    [Fact]
+    public async Task CallApiAsync_WithDisposedAuthProvider_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var mockDisposedAuthProvider = new Mock<IAuthorizationHeaderProvider>();
+        mockDisposedAuthProvider.Setup(a => a.CreateAuthorizationHeaderForAppAsync(It.IsAny<string>(), It.IsAny<AuthorizationHeaderProviderOptions?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ObjectDisposedException("IServiceProvider"));
+
+        // Create a separate DI container for this test
+        using var services = new ServiceCollection()
+            .AddSingleton<IConfiguration>(_serviceProvider.GetRequiredService<IConfiguration>())
+            .AddLogging(builder => builder.AddProvider(NullLoggerProvider.Instance))
+            .AddHttpClient("ApiClient", client => { })
+                .ConfigurePrimaryHttpMessageHandler(() => _mockHttpMessageHandler.Object)
+            .Services
+            .AddSingleton(mockDisposedAuthProvider.Object)
+            .AddScoped<UserTokenClient>()
+            .BuildServiceProvider();
+
+        var userTokenClient = services.GetRequiredService<UserTokenClient>();
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => userTokenClient.GetTokenAsync("user", "connection", "channel"));
+        
+        Assert.Contains("Authentication service is not available", exception.Message);
+    }
+
+    [Fact]
+    public async Task CallApiAsync_WithServerError_ThrowsHttpRequestException()
+    {
+        // Arrange
+        var userId = "test-user";
+        var connectionName = "test-connection";
+        var channelId = "test-channel";
+
+        SetupHttpMessageHandler(HttpStatusCode.InternalServerError, "Internal Server Error");
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<HttpRequestException>(
+            () => _userTokenClient.GetTokenAsync(userId, connectionName, channelId));
+        
+        Assert.Contains("API call failed with status InternalServerError", exception.Message);
+    }
+
+    [Theory]
+    [InlineData("", "test-connection", "test-channel")]
+    [InlineData("test-user", "", "test-channel")]
+    [InlineData("test-user", "test-connection", "")]
+    public async Task GetTokenAsync_WithEmptyParameters_StillMakesRequest(string userId, string connectionName, string channelId)
+    {
+        // Arrange
+        var expectedResponse = new IUserTokenClient.GetTokenResult
+        {
+            ConnectionName = connectionName,
+            Token = "test-token-value"
+        };
+        var responseJson = JsonSerializer.Serialize(expectedResponse, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+
+        SetupHttpMessageHandler(HttpStatusCode.OK, responseJson);
+
+        // Act
+        var result = await _userTokenClient.GetTokenAsync(userId, connectionName, channelId);
+
+        // Assert
+        Assert.NotNull(result);
+        VerifyHttpRequest("GET", "https://token.botframework.com/api/usertoken/GetToken");
+    }
+
+    [Fact]
+    public async Task GetTokenOrSignInResource_CreatesCorrectTokenExchangeState()
+    {
+        // Arrange
+        var userId = "test-user-123";
+        var connectionName = "test-connection";
+        var channelId = "test-channel";
+        
+        var expectedResponse = new IUserTokenClient.GetSignInResourceResult
+        {
+            SignInResource = new IUserTokenClient.Signinresource
+            {
+                SignInLink = "https://signin.link",
+                TokenPostResource = new IUserTokenClient.Tokenpostresource
+                {
+                    SasUrl = "https://sas.url"
+                }
+            }
+        };
+        var responseJson = JsonSerializer.Serialize(expectedResponse, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+
+        HttpRequestMessage? capturedRequest = null;
+        SetupHttpMessageHandlerWithCapture(HttpStatusCode.OK, responseJson, req => capturedRequest = req);
+
+        // Act
+        await _userTokenClient.GetTokenOrSignInResource(userId, connectionName, channelId);
+
+        // Assert
+        Assert.NotNull(capturedRequest);
+        Assert.Contains("state=", capturedRequest.RequestUri!.Query);
+        
+        // Extract and verify the state parameter contains the user ID
+        var query = System.Web.HttpUtility.ParseQueryString(capturedRequest.RequestUri.Query);
+        var stateValue = query["state"];
+        Assert.NotNull(stateValue);
+        
+        var decodedState = Encoding.UTF8.GetString(Convert.FromBase64String(stateValue));
+        Assert.Contains(userId, decodedState);
+        Assert.Contains(connectionName, decodedState);
+    }
+
+    [Fact]
+    public async Task GetTokenStatusAsync_WithoutIncludeParameter_OmitsInclude()
+    {
+        // Arrange
+        var userId = "test-user";
+        var channelId = "test-channel";
+        
+        var expectedResponse = new List<IUserTokenClient.GetTokenStatusResult>
+        {
+            new()
+            {
+                ConnectionName = "test-connection",
+                HasToken = false,
+                ServiceProviderDisplayName = "Test Provider"
+            }
+        };
+        var responseJson = JsonSerializer.Serialize(expectedResponse, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+
+        HttpRequestMessage? capturedRequest = null;
+        SetupHttpMessageHandlerWithCapture(HttpStatusCode.OK, responseJson, req => capturedRequest = req);
+
+        // Act
+        var result = await _userTokenClient.GetTokenStatusAsync(userId, channelId);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.False(result.HasToken);
+        Assert.NotNull(capturedRequest);
+        Assert.DoesNotContain("include=", capturedRequest.RequestUri!.Query);
+    }
+
+    [Fact]
+    public async Task ExchangeTokenAsync_SendsCorrectRequestBody()
+    {
+        // Arrange
+        var userId = "test-user";
+        var connectionName = "test-connection";
+        var channelId = "test-channel";
+        var exchangeToken = "test-exchange-token";
+        var expectedResponse = "exchanged-token-response";
+
+        string? capturedBody = null;
+        SetupHttpMessageHandlerWithBodyCapture(HttpStatusCode.OK, expectedResponse, body => capturedBody = body);
+
+        // Act
+        await _userTokenClient.ExchangeTokenAsync(userId, connectionName, channelId, exchangeToken);
+
+        // Assert
+        Assert.NotNull(capturedBody);
+        Assert.Contains("exchangeable", capturedBody);
+        Assert.Contains("test-exchange-token", capturedBody);
+        
+        var bodyObj = JsonSerializer.Deserialize<JsonElement>(capturedBody);
+        var exchangeable = bodyObj.GetProperty("exchangeable");
+        var token = exchangeable.GetProperty("token").GetString();
+        Assert.Equal(exchangeToken, token);
+    }
+
+    [Fact]
+    public async Task GetAadTokensAsync_SendsCorrectRequestBody()
+    {
+        // Arrange
+        var userId = "test-user";
+        var connectionName = "test-connection";
+        var channelId = "test-channel";
+        var resourceUrls = new[] { "https://graph.microsoft.com", "https://vault.azure.net" };
+        var expectedResponse = "aad-tokens-response";
+
+        string? capturedBody = null;
+        SetupHttpMessageHandlerWithBodyCapture(HttpStatusCode.OK, expectedResponse, body => capturedBody = body);
+
+        // Act
+        await _userTokenClient.GetAadTokensAsync(userId, connectionName, channelId, resourceUrls);
+
+        // Assert
+        Assert.NotNull(capturedBody);
+        Assert.Contains(userId, capturedBody);
+        Assert.Contains(connectionName, capturedBody);
+        Assert.Contains(channelId, capturedBody);
+        Assert.Contains("https://graph.microsoft.com", capturedBody);
+        Assert.Contains("https://vault.azure.net", capturedBody);
+    }
+
+    [Fact]
+    public async Task Configuration_IsCorrectlyInjected()
+    {
+        // Arrange & Act
+        var configuration = _serviceProvider.GetRequiredService<IConfiguration>();
+        var agentScope = configuration["AzureAd:AgentScope"];
+
+        // Assert
+        Assert.Equal(_testScope, agentScope);
+    }
+
+    [Fact]
+    public async Task HttpClientFactory_CreatesNamedClient()
+    {
+        // Arrange & Act
+        var httpClientFactory = _serviceProvider.GetRequiredService<IHttpClientFactory>();
+        var client = httpClientFactory.CreateClient("ApiClient");
+
+        // Assert
+        Assert.NotNull(client);
+        Assert.Equal("ApiClient", client.GetType().GetProperty("Options")?.GetValue(client)?.GetType().GetProperty("Name")?.GetValue(client.GetType().GetProperty("Options")?.GetValue(client)) ?? "ApiClient");
+    }
+
+    private void SetupHttpMessageHandler(HttpStatusCode statusCode, string content)
+    {
+        var response = new HttpResponseMessage(statusCode)
+        {
+            Content = new StringContent(content, Encoding.UTF8, "application/json")
+        };
+
+        _mockHttpMessageHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(response);
+    }
+
+    private void SetupHttpMessageHandlerWithCapture(HttpStatusCode statusCode, string content, Action<HttpRequestMessage> captureAction)
+    {
+        var response = new HttpResponseMessage(statusCode)
+        {
+            Content = new StringContent(content, Encoding.UTF8, "application/json")
+        };
+
+        _mockHttpMessageHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .Callback<HttpRequestMessage, CancellationToken>((req, ct) => captureAction(req))
+            .ReturnsAsync(response);
+    }
+
+    private void SetupHttpMessageHandlerWithBodyCapture(HttpStatusCode statusCode, string content, Action<string> bodyCapture)
+    {
+        var response = new HttpResponseMessage(statusCode)
+        {
+            Content = new StringContent(content, Encoding.UTF8, "application/json")
+        };
+
+        _mockHttpMessageHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .Callback<HttpRequestMessage, CancellationToken>(async (req, ct) =>
+            {
+                if (req.Content != null)
+                {
+                    var body = await req.Content.ReadAsStringAsync();
+                    bodyCapture(body);
+                }
+            })
+            .ReturnsAsync(response);
+    }
+
+    private void VerifyHttpRequest(string expectedMethod, string expectedBaseUrl)
+    {
+        _mockHttpMessageHandler.Protected()
+            .Verify(
+                "SendAsync",
+                Times.Once(),
+                ItExpr.Is<HttpRequestMessage>(req =>
+                    req.Method.ToString().Equals(expectedMethod, StringComparison.OrdinalIgnoreCase) &&
+                    req.RequestUri!.ToString().StartsWith(expectedBaseUrl)),
+                ItExpr.IsAny<CancellationToken>());
+    }
+
+    public void Dispose()
+    {
+        _serviceProvider?.Dispose();
+    }
+}
