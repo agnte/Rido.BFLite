@@ -19,6 +19,7 @@ public static class BotApplicationConfigurationExtensions
     {
         IConfiguration configuration = services.BuildServiceProvider().GetRequiredService<IConfiguration>();
         services
+            .AddHttpClient()
             .AddTokenAcquisition(true)
             .AddInMemoryTokenCaches()
             .AddAgentIdentities();

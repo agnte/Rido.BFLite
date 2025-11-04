@@ -14,13 +14,13 @@ public static class WebApiSecurity
 {
     public static void AddBotFrameworkAuthentication(this IServiceCollection services, string aadConfigSectionName = "AzureAd")
     {
-        IList<string> validTokenIssuers = ["https://api.botframework.com"];
         ILogger logger = services.BuildServiceProvider().GetRequiredService<ILoggerFactory>().CreateLogger("WebApiSecurity");
         IConfiguration configuration = services.BuildServiceProvider().GetRequiredService<IConfiguration>();
 
         string? tenantId = configuration[$"{aadConfigSectionName}:TenantId"];
         string? agentScope = configuration[$"{aadConfigSectionName}:AgentScope"];
         
+        IList<string> validTokenIssuers = ["https://api.botframework.com"];
         string dir = string.IsNullOrEmpty(tenantId) ? "botframework.com" : tenantId;
         validTokenIssuers.Add($"https://login.microsoftonline.com/{dir}/v2.0");
         
@@ -104,6 +104,7 @@ public static class WebApiSecurity
                 policy.RequireAuthenticatedUser();
                 policy.RequireClaim("aud", [configuration[$"{aadConfigSectionName}:ClientId"]!]);
                 //policy.Requirements.Add(new ScopeAuthorizationRequirement(["https://api.botframework.com/.default"]));
+                
             })
             .AddPolicy("Agent", policy =>
             {
