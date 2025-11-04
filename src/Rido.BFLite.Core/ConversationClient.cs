@@ -24,7 +24,14 @@ public class ConversationClient(
         activity.From!.Properties.TryGetValue("tenantId", out object? tenantId);
 
         using HttpClient httpClient = httpClientFactory.CreateClient();
-        AuthorizationHeaderProviderOptions options = new AuthorizationHeaderProviderOptions();
+        AuthorizationHeaderProviderOptions options = new AuthorizationHeaderProviderOptions()
+        {
+            AcquireTokenOptions = new AcquireTokenOptions()
+            {
+                AuthenticationOptionsName = "Bearer",
+            }
+        };
+        
         string token;
         if (agentScope != "https://api.botframework.com/.default" && agenticAppId is not null && agenticUserId is not null)
         {

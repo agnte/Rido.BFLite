@@ -2,9 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Identity.Abstractions;
 using Microsoft.Identity.Web;
-using Microsoft.Identity.Web.TokenCacheProviders.InMemory;
 using Microsoft.IdentityModel.Protocols;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
@@ -14,74 +12,31 @@ namespace Rido.BFLite.Core.Hosting;
 
 public static class WebApiSecurity
 {
-
-    private static readonly IList<string> validTokenIssuers = ["https://api.botframework.com"];
     public static void AddBotFrameworkAuthentication(this IServiceCollection services, string aadConfigSectionName = "AzureAd")
     {
-        ConversationClient ConversationClientFactory(IServiceProvider provider) => new(
-            provider.GetService<IConfiguration>()!,
-            provider.GetService<IHttpClientFactory>()!,
-            provider.GetService<ILogger<ConversationClient>>()!,
-            provider.GetService<IAuthorizationHeaderProvider>()!,
-            aadConfigSectionName
-            );
-
-        services.AddScoped<ConversationClient>(ConversationClientFactory);
-        services.AddScoped<UserTokenClient>();
-
+        IList<string> validTokenIssuers = ["https://api.botframework.com"];
+        ILogger logger = services.BuildServiceProvider().GetRequiredService<ILoggerFactory>().CreateLogger("WebApiSecurity");
         IConfiguration configuration = services.BuildServiceProvider().GetRequiredService<IConfiguration>();
-        string? tenantId = configuration[$"{aadConfigSectionName}:TenantId"];
-        string? clientId = configuration[$"{aadConfigSectionName}:ClientId"];
-        string? secret = configuration[$"{aadConfigSectionName}:ClientCredentials:0:ClientSecret"];
-        string? agentScope = configuration[$"{aadConfigSectionName}:AgentScope"];
 
+        string? tenantId = configuration[$"{aadConfigSectionName}:TenantId"];
+        string? agentScope = configuration[$"{aadConfigSectionName}:AgentScope"];
+        
         string dir = string.IsNullOrEmpty(tenantId) ? "botframework.com" : tenantId;
         validTokenIssuers.Add($"https://login.microsoftonline.com/{dir}/v2.0");
+        
         services
-            .AddTokenAcquisition(true)
-            .AddInMemoryTokenCaches()
             .AddAuthentication()
             .AddMicrosoftIdentityWebApi(configuration.GetSection(aadConfigSectionName), JwtBearerDefaults.AuthenticationScheme, true);
 
-        if (!string.IsNullOrEmpty(agentScope))
-        {
-            services.AddAgentIdentities();
-        }
-
-        ConfigureIncomingTokenValidation(services, aadConfigSectionName, configuration, tenantId, agentScope);
-
-        services.Configure<MicrosoftIdentityApplicationOptions>(ops =>
-        {
-            ops.Instance = "https://login.microsoftonline.com/";
-            ops.TenantId = tenantId;
-            ops.ClientId = clientId;
-            ops.ClientCredentials = [
-                new CredentialDescription()
-        {
-            //SourceType = CredentialSource.SignedAssertionFromManagedIdentity,
-            //ManagedIdentityClientId = miClientId
-            SourceType = CredentialSource.ClientSecret,
-            ClientSecret = secret
-        }
-            ];
-        });
-
-    }
-
-    
-
-    private static void ConfigureIncomingTokenValidation(IServiceCollection services, string tokenValidationSectionName, IConfiguration configuration, string? tenantId, string? agentScope)
-    {
         services.Configure<JwtBearerOptions>("Bearer", options =>
         {
             options.SaveToken = true;
-            string cid = configuration[$"{tokenValidationSectionName}:ClientId"]!;
-
+            string cid = configuration[$"{aadConfigSectionName}:ClientId"]!;
 
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidIssuers = validTokenIssuers,
-                ValidAudiences = [configuration[$"{tokenValidationSectionName}:ClientId"], "https://api.botframework.com"],
+                ValidAudiences = [configuration[$"{aadConfigSectionName}:ClientId"], "https://api.botframework.com"],
                 ValidateAudience = true,
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
@@ -103,55 +58,59 @@ public static class WebApiSecurity
 
             options.TokenValidationParameters.EnableAadSigningKeyIssuerValidation();
 
-            //options.Events = new JwtBearerEvents
-            //{
-            //    OnAuthenticationFailed = context =>
-            //    {
-            //        var logger = context.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("JwtBearer");
-            //        logger.LogError(context.Exception, "Authentication failed.");
-            //        return Task.CompletedTask;
-            //    },
-            //    OnTokenValidated = context =>
-            //    {
-            //        // Additional custom validation can be added here if needed
-            //        return Task.CompletedTask;
-            //    },
-            //    OnForbidden = context =>
-            //    {
-            //        var logger = context.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("JwtBearer");
-            //        logger.LogWarning("Forbidden: {Message}", context.Result?.ToString());
-            //        return Task.CompletedTask;
-            //    },
-            //    OnChallenge = context =>
-            //    {
-            //        var logger = context.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("JwtBearer");
-            //        logger.LogWarning("Challenge: {Message}", context.ErrorDescription);
-            //        return Task.CompletedTask;
-            //    }
-            //};
+            options.Events = new JwtBearerEvents
+            {
+                OnMessageReceived = context =>
+                {
+                    var token = context.Request.Headers.Authorization.FirstOrDefault();
+
+                    Microsoft.IdentityModel.JsonWebTokens.JsonWebToken jwt = new (token!["Bearer ".Length..]);
+                    var textClaims = string.Empty;
+                    jwt.Claims.ToList().ForEach(c => textClaims += $"{c.Type}:{c.Value}\r\n");
+                    logger.LogInformation("OnMessageReceived: {Token}", textClaims);
+                    return Task.CompletedTask;
+                },
+                OnAuthenticationFailed = context =>
+                {
+                    logger.LogError(context.Exception, "Authentication failed.");
+                    return Task.CompletedTask;
+                },
+                OnTokenValidated = context =>
+                {
+                    // Additional custom validation can be added here if needed
+                    return Task.CompletedTask;
+                },
+                OnForbidden = context =>
+                {
+                    //var logger = context.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("JwtBearer");
+                    logger.LogWarning("Forbidden: {Message}", context.Result?.ToString());
+                    return Task.CompletedTask;
+                },
+                OnChallenge = context =>
+                {
+                    var logger = context.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("JwtBearer");
+                    logger.LogWarning("Challenge: {Message}", context.ErrorDescription);
+                    return Task.CompletedTask;
+                }
+            };
 
         });
 
-
-
-
-        services.AddAuthorization(options =>
-        {
-            options.AddPolicy("Bot", policy =>
+        services.AddAuthorizationBuilder()
+            .AddPolicy("Bot", policy =>
+            {
+                //policy.RequireAssertion(_ => true);
+                policy.RequireClaim("aud");
+                policy.RequireAuthenticatedUser();
+                policy.RequireClaim("aud", [configuration[$"{aadConfigSectionName}:ClientId"]!]);
+                //policy.Requirements.Add(new ScopeAuthorizationRequirement(["https://api.botframework.com/.default"]));
+            })
+            .AddPolicy("Agent", policy =>
             {
                 policy.RequireAssertion(_ => true);
                 //policy.RequireClaim("aud");
                 //policy.RequireAuthenticatedUser();
                 //policy.RequireClaim("aud", [configuration[$"{tokenValidationSectionName}:ClientId"]!]);
             });
-
-            options.AddPolicy("Agent", policy =>
-            {
-                policy.RequireAssertion(_ => true);
-                //policy.RequireClaim("aud");
-                //policy.RequireAuthenticatedUser();
-                //policy.RequireClaim("aud", [configuration[$"{tokenValidationSectionName}:ClientId"]!]);
-            });
-        });
     }
 }

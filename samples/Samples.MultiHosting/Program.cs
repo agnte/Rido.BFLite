@@ -4,8 +4,9 @@ using Rido.BFLite.Core.Schema;
 
 WebApplicationBuilder webAppBuilder = WebApplication.CreateSlimBuilder(args);
 webAppBuilder.Services.AddBotFrameworkAuthentication("BotIdentity");
-webAppBuilder.Services.AddMessageLoop<MyBotApplication>();
-webAppBuilder.Services.AddMessageLoop<MyAgentApplication>();
+webAppBuilder.Services.AddBotApplicationClients("BotIdentity");
+webAppBuilder.Services.AddBotApplication<MyBotApplication>();
+webAppBuilder.Services.AddBotApplication<MyAgentApplication>();
 
 WebApplication webApp = webAppBuilder.Build();
 webApp.UseBotApplication<MyBotApplication>("api/bot/messages", "Bot");

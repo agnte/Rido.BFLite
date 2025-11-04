@@ -5,10 +5,14 @@ namespace Rido.BFLite.Core.Hosting;
 
 public static class AppBuilderExtensions
 {
-    public static T UseBotApplication<T>(this IApplicationBuilder builder, string routePath = "api/messages", string authorizationPolicy = "Bot") where T : BotApplication, new()
+    public static TApp UseBotApplication<TApp>(
+        this IApplicationBuilder builder, 
+        string routePath = "api/messages", 
+        string authorizationPolicy = "Bot") 
+            where TApp : BotApplication, new()
     {
         WebApplication? webApp = builder as WebApplication;
-        T app = builder.ApplicationServices.GetService<T>() ?? throw new Exception("Application not registered");
+        TApp app = builder.ApplicationServices.GetService<TApp>() ?? throw new Exception("Application not registered");
         builder.UseAuthentication();
         builder.UseAuthorization();
 
