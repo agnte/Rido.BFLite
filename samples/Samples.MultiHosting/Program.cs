@@ -3,7 +3,7 @@ using Rido.BFLite.Core.Hosting;
 using Rido.BFLite.Core.Schema;
 
 WebApplicationBuilder webAppBuilder = WebApplication.CreateSlimBuilder(args);
-webAppBuilder.Services.AddBotFrameworkAuthentication("BotIdentity");
+webAppBuilder.Services.AddBotFrameworkAuthentication();
 webAppBuilder.Services.AddBotApplicationClients("BotIdentity");
     //webAppBuilder.Services.AddBotApplicationClients("AgentIdentity");
 webAppBuilder.Services.AddBotApplication<MyBotApplication>();
@@ -11,7 +11,7 @@ webAppBuilder.Services.AddBotApplication<MyAgentApplication>();
 
 WebApplication webApp = webAppBuilder.Build();
 webApp.UseBotApplication<MyBotApplication>("api/bot/messages", "Bot");
-webApp.UseBotApplication<MyAgentApplication>("api/messages", "Bot");
+webApp.UseBotApplication<MyAgentApplication>("api/messages", "Agent");
 
 webApp.Run();
 
