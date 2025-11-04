@@ -5,10 +5,10 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Identity.Abstractions;
 using Moq;
 using Moq.Protected;
+using System.Collections.Specialized;
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using Rido.BFLite.Core;
 
 namespace Rido.BFLite.Core.Tests;
 
@@ -21,6 +21,9 @@ public class UserTokenClientTests : IDisposable
     private readonly string _testScope = "https://api.botframework.com/.default";
     private readonly string _testAuthHeader = "Bearer test-token";
 
+    // Cache the JsonSerializerOptions instance
+    private static readonly JsonSerializerOptions _camelCaseOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+
     public UserTokenClientTests()
     {
         // Setup mocks
@@ -32,14 +35,14 @@ public class UserTokenClientTests : IDisposable
             .ReturnsAsync(_testAuthHeader);
 
         // Setup DI container
-        var services = new ServiceCollection();
-        
+        ServiceCollection services = new();
+
         // Add configuration with test data
-        var configurationData = new Dictionary<string, string?>
+        Dictionary<string, string?> configurationData = new()
         {
             ["AzureAd:AgentScope"] = _testScope
         };
-        var configuration = new ConfigurationBuilder()
+        IConfigurationRoot configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(configurationData)
             .Build();
         services.AddSingleton<IConfiguration>(configuration);
@@ -65,28 +68,28 @@ public class UserTokenClientTests : IDisposable
     public async Task GetTokenAsync_WithValidResponse_ReturnsToken()
     {
         // Arrange
-        var userId = "test-user";
-        var connectionName = "test-connection";
-        var channelId = "test-channel";
-        var code = "test-code";
-        
-        var expectedResponse = new IUserTokenClient.GetTokenResult
+        string userId = "test-user";
+        string connectionName = "test-connection";
+        string channelId = "test-channel";
+        string code = "test-code";
+
+        IUserTokenClient.GetTokenResult expectedResponse = new()
         {
             ConnectionName = connectionName,
             Token = "test-token-value"
         };
-        var responseJson = JsonSerializer.Serialize(expectedResponse, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        string responseJson = JsonSerializer.Serialize(expectedResponse, _camelCaseOptions);
 
         SetupHttpMessageHandler(HttpStatusCode.OK, responseJson);
 
         // Act
-        var result = await _userTokenClient.GetTokenAsync(userId, connectionName, channelId, code);
+        IUserTokenClient.GetTokenResult result = await _userTokenClient.GetTokenAsync(userId, connectionName, channelId, code);
 
         // Assert
         Assert.NotNull(result);
         Assert.Equal(connectionName, result.ConnectionName);
         Assert.Equal("test-token-value", result.Token);
-        
+
         // Verify the HTTP request was made correctly
         VerifyHttpRequest("GET", "https://token.botframework.com/api/usertoken/GetToken");
         _mockAuthProvider.Verify(a => a.CreateAuthorizationHeaderForAppAsync(It.IsAny<string>(), It.IsAny<AuthorizationHeaderProviderOptions?>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -96,21 +99,21 @@ public class UserTokenClientTests : IDisposable
     public async Task GetTokenAsync_WithoutCode_OmitsCodeParameter()
     {
         // Arrange
-        var userId = "test-user";
-        var connectionName = "test-connection";
-        var channelId = "test-channel";
-        
-        var expectedResponse = new IUserTokenClient.GetTokenResult
+        string userId = "test-user";
+        string connectionName = "test-connection";
+        string channelId = "test-channel";
+
+        IUserTokenClient.GetTokenResult expectedResponse = new()
         {
             ConnectionName = connectionName,
             Token = "test-token-value"
         };
-        var responseJson = JsonSerializer.Serialize(expectedResponse, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        string responseJson = JsonSerializer.Serialize(expectedResponse, _camelCaseOptions);
 
         SetupHttpMessageHandler(HttpStatusCode.OK, responseJson);
 
         // Act
-        var result = await _userTokenClient.GetTokenAsync(userId, connectionName, channelId);
+        IUserTokenClient.GetTokenResult result = await _userTokenClient.GetTokenAsync(userId, connectionName, channelId);
 
         // Assert
         Assert.NotNull(result);
@@ -121,14 +124,14 @@ public class UserTokenClientTests : IDisposable
     public async Task GetTokenAsync_WithNotFoundResponse_ReturnsNull()
     {
         // Arrange
-        var userId = "test-user";
-        var connectionName = "test-connection";
-        var channelId = "test-channel";
+        string userId = "test-user";
+        string connectionName = "test-connection";
+        string channelId = "test-channel";
 
         SetupHttpMessageHandler(HttpStatusCode.NotFound, "Not Found");
 
         // Act
-        var result = await _userTokenClient.GetTokenAsync(userId, connectionName, channelId);
+        IUserTokenClient.GetTokenResult result = await _userTokenClient.GetTokenAsync(userId, connectionName, channelId);
 
         // Assert
         Assert.Null(result);
@@ -138,11 +141,11 @@ public class UserTokenClientTests : IDisposable
     public async Task GetTokenOrSignInResource_WithValidResponse_ReturnsSignInResource()
     {
         // Arrange
-        var userId = "test-user";
-        var connectionName = "test-connection";
-        var channelId = "test-channel";
-        
-        var expectedResponse = new IUserTokenClient.GetSignInResourceResult
+        string userId = "test-user";
+        string connectionName = "test-connection";
+        string channelId = "test-channel";
+
+        IUserTokenClient.GetSignInResourceResult expectedResponse = new()
         {
             SignInResource = new IUserTokenClient.Signinresource
             {
@@ -153,19 +156,19 @@ public class UserTokenClientTests : IDisposable
                 }
             }
         };
-        var responseJson = JsonSerializer.Serialize(expectedResponse, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        string responseJson = JsonSerializer.Serialize(expectedResponse, _camelCaseOptions);
 
         SetupHttpMessageHandler(HttpStatusCode.OK, responseJson);
 
         // Act
-        var result = await _userTokenClient.GetTokenOrSignInResource(userId, connectionName, channelId);
+        IUserTokenClient.GetSignInResourceResult result = await _userTokenClient.GetTokenOrSignInResource(userId, connectionName, channelId);
 
         // Assert
         Assert.NotNull(result);
         Assert.NotNull(result.SignInResource);
         Assert.Equal("https://signin.link", result.SignInResource.SignInLink);
         Assert.Equal("https://sas.url", result.SignInResource.TokenPostResource?.SasUrl);
-        
+
         VerifyHttpRequest("GET", "https://token.botframework.com/api/usertoken/GetTokenOrSignInResource");
     }
 
@@ -173,32 +176,32 @@ public class UserTokenClientTests : IDisposable
     public async Task GetTokenStatusAsync_WithValidResponse_ReturnsTokenStatus()
     {
         // Arrange
-        var userId = "test-user";
-        var channelId = "test-channel";
-        var include = "test-include";
-        
-        var expectedResponse = new List<IUserTokenClient.GetTokenStatusResult>
-        {
+        string userId = "test-user";
+        string channelId = "test-channel";
+        string include = "test-include";
+
+        List<IUserTokenClient.GetTokenStatusResult> expectedResponse =
+        [
             new()
             {
                 ConnectionName = "test-connection",
                 HasToken = true,
                 ServiceProviderDisplayName = "Test Provider"
             }
-        };
-        var responseJson = JsonSerializer.Serialize(expectedResponse, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        ];
+        string responseJson = JsonSerializer.Serialize(expectedResponse, _camelCaseOptions);
 
         SetupHttpMessageHandler(HttpStatusCode.OK, responseJson);
 
         // Act
-        var result = await _userTokenClient.GetTokenStatusAsync(userId, channelId, include);
+        IUserTokenClient.GetTokenStatusResult result = await _userTokenClient.GetTokenStatusAsync(userId, channelId, include);
 
         // Assert
         Assert.NotNull(result);
         Assert.Equal("test-connection", result.ConnectionName);
         Assert.True(result.HasToken);
         Assert.Equal("Test Provider", result.ServiceProviderDisplayName);
-        
+
         VerifyHttpRequest("GET", "https://token.botframework.com/api/usertoken/GetTokenStatus");
     }
 
@@ -206,14 +209,14 @@ public class UserTokenClientTests : IDisposable
     public async Task SignOutUserAsync_WithSuccessfulResponse_ReturnsTrue()
     {
         // Arrange
-        var userId = "test-user";
-        var connectionName = "test-connection";
-        var channelId = "test-channel";
+        string userId = "test-user";
+        string connectionName = "test-connection";
+        string channelId = "test-channel";
 
         SetupHttpMessageHandler(HttpStatusCode.OK, "");
 
         // Act
-        var result = await _userTokenClient.SignOutUserAsync(userId, connectionName, channelId);
+        bool result = await _userTokenClient.SignOutUserAsync(userId, connectionName, channelId);
 
         // Assert
         Assert.True(result);
@@ -224,12 +227,12 @@ public class UserTokenClientTests : IDisposable
     public async Task SignOutUserAsync_WithHttpException_ReturnsFalse()
     {
         // Arrange
-        var userId = "test-user";
+        string userId = "test-user";
 
         SetupHttpMessageHandler(HttpStatusCode.InternalServerError, "Server Error");
 
         // Act
-        var result = await _userTokenClient.SignOutUserAsync(userId);
+        bool result = await _userTokenClient.SignOutUserAsync(userId);
 
         // Assert
         Assert.False(result);
@@ -239,16 +242,16 @@ public class UserTokenClientTests : IDisposable
     public async Task ExchangeTokenAsync_WithValidResponse_ReturnsToken()
     {
         // Arrange
-        var userId = "test-user";
-        var connectionName = "test-connection";
-        var channelId = "test-channel";
-        var exchangeToken = "exchange-token";
-        var expectedResponse = "exchanged-token";
+        string userId = "test-user";
+        string connectionName = "test-connection";
+        string channelId = "test-channel";
+        string exchangeToken = "exchange-token";
+        string expectedResponse = "exchanged-token";
 
         SetupHttpMessageHandler(HttpStatusCode.OK, expectedResponse);
 
         // Act
-        var result = await _userTokenClient.ExchangeTokenAsync(userId, connectionName, channelId, exchangeToken);
+        string result = await _userTokenClient.ExchangeTokenAsync(userId, connectionName, channelId, exchangeToken);
 
         // Assert
         Assert.Equal(expectedResponse, result);
@@ -259,16 +262,16 @@ public class UserTokenClientTests : IDisposable
     public async Task GetAadTokensAsync_WithValidResponse_ReturnsTokens()
     {
         // Arrange
-        var userId = "test-user";
-        var connectionName = "test-connection";
-        var channelId = "test-channel";
-        var resourceUrls = new[] { "https://graph.microsoft.com", "https://vault.azure.net" };
-        var expectedResponse = "aad-tokens-response";
+        string userId = "test-user";
+        string connectionName = "test-connection";
+        string channelId = "test-channel";
+        string[] resourceUrls = ["https://graph.microsoft.com", "https://vault.azure.net"];
+        string expectedResponse = "aad-tokens-response";
 
         SetupHttpMessageHandler(HttpStatusCode.OK, expectedResponse);
 
         // Act
-        var result = await _userTokenClient.GetAadTokensAsync(userId, connectionName, channelId, resourceUrls);
+        string result = await _userTokenClient.GetAadTokensAsync(userId, connectionName, channelId, resourceUrls);
 
         // Assert
         Assert.Equal(expectedResponse, result);
@@ -279,15 +282,15 @@ public class UserTokenClientTests : IDisposable
     public async Task GetAadTokensAsync_WithNullResourceUrls_UsesEmptyArray()
     {
         // Arrange
-        var userId = "test-user";
-        var connectionName = "test-connection";
-        var channelId = "test-channel";
-        var expectedResponse = "aad-tokens-response";
+        string userId = "test-user";
+        string connectionName = "test-connection";
+        string channelId = "test-channel";
+        string expectedResponse = "aad-tokens-response";
 
         SetupHttpMessageHandler(HttpStatusCode.OK, expectedResponse);
 
         // Act
-        var result = await _userTokenClient.GetAadTokensAsync(userId, connectionName, channelId);
+        string result = await _userTokenClient.GetAadTokensAsync(userId, connectionName, channelId);
 
         // Assert
         Assert.Equal(expectedResponse, result);
@@ -298,12 +301,12 @@ public class UserTokenClientTests : IDisposable
     public async Task CallApiAsync_WithDisposedAuthProvider_ThrowsInvalidOperationException()
     {
         // Arrange
-        var mockDisposedAuthProvider = new Mock<IAuthorizationHeaderProvider>();
+        Mock<IAuthorizationHeaderProvider> mockDisposedAuthProvider = new();
         mockDisposedAuthProvider.Setup(a => a.CreateAuthorizationHeaderForAppAsync(It.IsAny<string>(), It.IsAny<AuthorizationHeaderProviderOptions?>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new ObjectDisposedException("IServiceProvider"));
 
         // Create a separate DI container for this test
-        using var services = new ServiceCollection()
+        using ServiceProvider services = new ServiceCollection()
             .AddSingleton<IConfiguration>(_serviceProvider.GetRequiredService<IConfiguration>())
             .AddLogging(builder => builder.AddProvider(NullLoggerProvider.Instance))
             .AddHttpClient("ApiClient", client => { })
@@ -313,12 +316,12 @@ public class UserTokenClientTests : IDisposable
             .AddScoped<UserTokenClient>()
             .BuildServiceProvider();
 
-        var userTokenClient = services.GetRequiredService<UserTokenClient>();
+        UserTokenClient userTokenClient = services.GetRequiredService<UserTokenClient>();
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => userTokenClient.GetTokenAsync("user", "connection", "channel"));
-        
+
         Assert.Contains("Authentication service is not available", exception.Message);
     }
 
@@ -326,16 +329,16 @@ public class UserTokenClientTests : IDisposable
     public async Task CallApiAsync_WithServerError_ThrowsHttpRequestException()
     {
         // Arrange
-        var userId = "test-user";
-        var connectionName = "test-connection";
-        var channelId = "test-channel";
+        string userId = "test-user";
+        string connectionName = "test-connection";
+        string channelId = "test-channel";
 
         SetupHttpMessageHandler(HttpStatusCode.InternalServerError, "Internal Server Error");
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<HttpRequestException>(
+        HttpRequestException exception = await Assert.ThrowsAsync<HttpRequestException>(
             () => _userTokenClient.GetTokenAsync(userId, connectionName, channelId));
-        
+
         Assert.Contains("API call failed with status InternalServerError", exception.Message);
     }
 
@@ -346,17 +349,17 @@ public class UserTokenClientTests : IDisposable
     public async Task GetTokenAsync_WithEmptyParameters_StillMakesRequest(string userId, string connectionName, string channelId)
     {
         // Arrange
-        var expectedResponse = new IUserTokenClient.GetTokenResult
+        IUserTokenClient.GetTokenResult expectedResponse = new()
         {
             ConnectionName = connectionName,
             Token = "test-token-value"
         };
-        var responseJson = JsonSerializer.Serialize(expectedResponse, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        string responseJson = JsonSerializer.Serialize(expectedResponse, _camelCaseOptions);
 
         SetupHttpMessageHandler(HttpStatusCode.OK, responseJson);
 
         // Act
-        var result = await _userTokenClient.GetTokenAsync(userId, connectionName, channelId);
+        IUserTokenClient.GetTokenResult result = await _userTokenClient.GetTokenAsync(userId, connectionName, channelId);
 
         // Assert
         Assert.NotNull(result);
@@ -367,11 +370,11 @@ public class UserTokenClientTests : IDisposable
     public async Task GetTokenOrSignInResource_CreatesCorrectTokenExchangeState()
     {
         // Arrange
-        var userId = "test-user-123";
-        var connectionName = "test-connection";
-        var channelId = "test-channel";
-        
-        var expectedResponse = new IUserTokenClient.GetSignInResourceResult
+        string userId = "test-user-123";
+        string connectionName = "test-connection";
+        string channelId = "test-channel";
+
+        IUserTokenClient.GetSignInResourceResult expectedResponse = new()
         {
             SignInResource = new IUserTokenClient.Signinresource
             {
@@ -382,7 +385,7 @@ public class UserTokenClientTests : IDisposable
                 }
             }
         };
-        var responseJson = JsonSerializer.Serialize(expectedResponse, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        string responseJson = JsonSerializer.Serialize(expectedResponse, _camelCaseOptions);
 
         HttpRequestMessage? capturedRequest = null;
         SetupHttpMessageHandlerWithCapture(HttpStatusCode.OK, responseJson, req => capturedRequest = req);
@@ -393,13 +396,13 @@ public class UserTokenClientTests : IDisposable
         // Assert
         Assert.NotNull(capturedRequest);
         Assert.Contains("state=", capturedRequest.RequestUri!.Query);
-        
+
         // Extract and verify the state parameter contains the user ID
-        var query = System.Web.HttpUtility.ParseQueryString(capturedRequest.RequestUri.Query);
-        var stateValue = query["state"];
+        NameValueCollection query = System.Web.HttpUtility.ParseQueryString(capturedRequest.RequestUri.Query);
+        string? stateValue = query["state"];
         Assert.NotNull(stateValue);
-        
-        var decodedState = Encoding.UTF8.GetString(Convert.FromBase64String(stateValue));
+
+        string decodedState = Encoding.UTF8.GetString(Convert.FromBase64String(stateValue));
         Assert.Contains(userId, decodedState);
         Assert.Contains(connectionName, decodedState);
     }
@@ -408,25 +411,25 @@ public class UserTokenClientTests : IDisposable
     public async Task GetTokenStatusAsync_WithoutIncludeParameter_OmitsInclude()
     {
         // Arrange
-        var userId = "test-user";
-        var channelId = "test-channel";
-        
-        var expectedResponse = new List<IUserTokenClient.GetTokenStatusResult>
-        {
+        string userId = "test-user";
+        string channelId = "test-channel";
+
+        List<IUserTokenClient.GetTokenStatusResult> expectedResponse =
+        [
             new()
             {
                 ConnectionName = "test-connection",
                 HasToken = false,
                 ServiceProviderDisplayName = "Test Provider"
             }
-        };
-        var responseJson = JsonSerializer.Serialize(expectedResponse, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        ];
+        string responseJson = JsonSerializer.Serialize(expectedResponse, _camelCaseOptions);
 
         HttpRequestMessage? capturedRequest = null;
         SetupHttpMessageHandlerWithCapture(HttpStatusCode.OK, responseJson, req => capturedRequest = req);
 
         // Act
-        var result = await _userTokenClient.GetTokenStatusAsync(userId, channelId);
+        IUserTokenClient.GetTokenStatusResult result = await _userTokenClient.GetTokenStatusAsync(userId, channelId);
 
         // Assert
         Assert.NotNull(result);
@@ -439,11 +442,11 @@ public class UserTokenClientTests : IDisposable
     public async Task ExchangeTokenAsync_SendsCorrectRequestBody()
     {
         // Arrange
-        var userId = "test-user";
-        var connectionName = "test-connection";
-        var channelId = "test-channel";
-        var exchangeToken = "test-exchange-token";
-        var expectedResponse = "exchanged-token-response";
+        string userId = "test-user";
+        string connectionName = "test-connection";
+        string channelId = "test-channel";
+        string exchangeToken = "test-exchange-token";
+        string expectedResponse = "exchanged-token-response";
 
         string? capturedBody = null;
         SetupHttpMessageHandlerWithBodyCapture(HttpStatusCode.OK, expectedResponse, body => capturedBody = body);
@@ -455,10 +458,10 @@ public class UserTokenClientTests : IDisposable
         Assert.NotNull(capturedBody);
         Assert.Contains("exchangeable", capturedBody);
         Assert.Contains("test-exchange-token", capturedBody);
-        
-        var bodyObj = JsonSerializer.Deserialize<JsonElement>(capturedBody);
-        var exchangeable = bodyObj.GetProperty("exchangeable");
-        var token = exchangeable.GetProperty("token").GetString();
+
+        JsonElement bodyObj = JsonSerializer.Deserialize<JsonElement>(capturedBody);
+        JsonElement exchangeable = bodyObj.GetProperty("exchangeable");
+        string? token = exchangeable.GetProperty("token").GetString();
         Assert.Equal(exchangeToken, token);
     }
 
@@ -466,11 +469,11 @@ public class UserTokenClientTests : IDisposable
     public async Task GetAadTokensAsync_SendsCorrectRequestBody()
     {
         // Arrange
-        var userId = "test-user";
-        var connectionName = "test-connection";
-        var channelId = "test-channel";
-        var resourceUrls = new[] { "https://graph.microsoft.com", "https://vault.azure.net" };
-        var expectedResponse = "aad-tokens-response";
+        string userId = "test-user";
+        string connectionName = "test-connection";
+        string channelId = "test-channel";
+        string[] resourceUrls = ["https://graph.microsoft.com", "https://vault.azure.net"];
+        string expectedResponse = "aad-tokens-response";
 
         string? capturedBody = null;
         SetupHttpMessageHandlerWithBodyCapture(HttpStatusCode.OK, expectedResponse, body => capturedBody = body);
@@ -491,8 +494,8 @@ public class UserTokenClientTests : IDisposable
     public async Task Configuration_IsCorrectlyInjected()
     {
         // Arrange & Act
-        var configuration = _serviceProvider.GetRequiredService<IConfiguration>();
-        var agentScope = configuration["AzureAd:AgentScope"];
+        IConfiguration configuration = _serviceProvider.GetRequiredService<IConfiguration>();
+        string? agentScope = configuration["AzureAd:AgentScope"];
 
         // Assert
         Assert.Equal(_testScope, agentScope);
@@ -502,8 +505,8 @@ public class UserTokenClientTests : IDisposable
     public async Task HttpClientFactory_CreatesNamedClient()
     {
         // Arrange & Act
-        var httpClientFactory = _serviceProvider.GetRequiredService<IHttpClientFactory>();
-        var client = httpClientFactory.CreateClient("ApiClient");
+        IHttpClientFactory httpClientFactory = _serviceProvider.GetRequiredService<IHttpClientFactory>();
+        HttpClient client = httpClientFactory.CreateClient("ApiClient");
 
         // Assert
         Assert.NotNull(client);
@@ -512,7 +515,7 @@ public class UserTokenClientTests : IDisposable
 
     private void SetupHttpMessageHandler(HttpStatusCode statusCode, string content)
     {
-        var response = new HttpResponseMessage(statusCode)
+        HttpResponseMessage response = new(statusCode)
         {
             Content = new StringContent(content, Encoding.UTF8, "application/json")
         };
@@ -527,7 +530,7 @@ public class UserTokenClientTests : IDisposable
 
     private void SetupHttpMessageHandlerWithCapture(HttpStatusCode statusCode, string content, Action<HttpRequestMessage> captureAction)
     {
-        var response = new HttpResponseMessage(statusCode)
+        HttpResponseMessage response = new(statusCode)
         {
             Content = new StringContent(content, Encoding.UTF8, "application/json")
         };
@@ -543,7 +546,7 @@ public class UserTokenClientTests : IDisposable
 
     private void SetupHttpMessageHandlerWithBodyCapture(HttpStatusCode statusCode, string content, Action<string> bodyCapture)
     {
-        var response = new HttpResponseMessage(statusCode)
+        HttpResponseMessage response = new(statusCode)
         {
             Content = new StringContent(content, Encoding.UTF8, "application/json")
         };
@@ -557,7 +560,7 @@ public class UserTokenClientTests : IDisposable
             {
                 if (req.Content != null)
                 {
-                    var body = await req.Content.ReadAsStringAsync();
+                    string body = await req.Content.ReadAsStringAsync(ct);
                     bodyCapture(body);
                 }
             })
@@ -579,5 +582,6 @@ public class UserTokenClientTests : IDisposable
     public void Dispose()
     {
         _serviceProvider?.Dispose();
+        GC.SuppressFinalize(this);
     }
 }
