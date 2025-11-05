@@ -3,8 +3,8 @@ using Rido.BFLite.Core.Schema;
 using Rido.BFLite.Teams;
 
 WebApplicationBuilder webAppBuilder = WebApplication.CreateSlimBuilder(args);
-webAppBuilder.Services.AddAuthentication().AddBotAgentAuthentication(webAppBuilder.Configuration);
-webAppBuilder.Services.AddAuthorizationBuilder().AddDefaultPolicy("Bot", policy => { policy.AuthenticationSchemes.Add("Bot"); policy.RequireAuthenticatedUser(); });
+webAppBuilder.Services.AddBotAuthentication();
+webAppBuilder.Services.AddBotAuthorization();
 webAppBuilder.Services.AddBotApplicationClients();
 webAppBuilder.Services.AddBotApplication<TeamsBotApplication>();
 WebApplication webApp = webAppBuilder.Build();

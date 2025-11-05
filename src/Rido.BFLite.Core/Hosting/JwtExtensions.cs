@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,6 +12,38 @@ namespace Rido.BFLite.Core.Hosting;
 
 public static class JwtExtensions
 {
+
+    public static AuthenticationBuilder AddBotAuthentication(this IServiceCollection services, string aadSectionName = "AzureAd")
+    {
+        var authenticationBuilder = services.AddAuthentication();
+        var configuration = services.BuildServiceProvider().GetRequiredService<IConfiguration>();
+        authenticationBuilder.AddBotAgentAuthentication(configuration, aadSectionName);
+        return authenticationBuilder;
+    }
+
+    public static AuthorizationBuilder AddBotAuthorization(this IServiceCollection services)
+    {
+        var authorizationBuilder = services
+            .AddAuthorizationBuilder()
+            .AddDefaultPolicy("Bot", policy =>
+            {
+                policy.AuthenticationSchemes.Add("Bot");
+                policy.RequireAuthenticatedUser();
+            });
+        return authorizationBuilder;
+    }
+
+    public static AuthorizationBuilder AddAgentAuthorization(this IServiceCollection services)
+    {
+        var authorizationBuilder = services
+            .AddAuthorizationBuilder()
+            .AddDefaultPolicy("Agent", policy =>
+            {
+                policy.AuthenticationSchemes.Add("Agent");
+                policy.RequireAuthenticatedUser();
+            });
+        return authorizationBuilder;
+    }
 
     public static AuthenticationBuilder AddBotAgentAuthentication(this AuthenticationBuilder builder, IConfiguration configuration, string aadSectionName = "AzureAd")
     {

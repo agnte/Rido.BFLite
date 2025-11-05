@@ -20,6 +20,7 @@ webAppBuilder.Services.AddAuthorizationBuilder()
     });
 
 
+
 //webAppBuilder.Services.AddBotApplicationClients("BotIdentity");
 webAppBuilder.Services.AddBotApplicationClients("AgentIdentity");
 webAppBuilder.Services.AddBotApplication<MyBotApplication>();
