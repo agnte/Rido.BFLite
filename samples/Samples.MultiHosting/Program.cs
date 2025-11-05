@@ -1,44 +1,32 @@
-﻿using Rido.BFLite.Core;
-using Rido.BFLite.Core.Hosting;
-using Rido.BFLite.Core.Schema;
+﻿using Rido.BFLite.Core.Hosting;
 
 WebApplicationBuilder webAppBuilder = WebApplication.CreateSlimBuilder(args);
-webAppBuilder.Services.AddBotFrameworkAuthentication();
-webAppBuilder.Services.AddBotApplicationClients("BotIdentity");
-    //webAppBuilder.Services.AddBotApplicationClients("AgentIdentity");
+IConfiguration configuration = webAppBuilder.Configuration;
+webAppBuilder.Services
+    .AddAuthentication()
+    .AddCustomJwtBearer("Bot", "botframework.com", configuration["BotIdentity:ClientId"]!)
+    .AddCustomJwtBearer("Agent", configuration["AgentIdentity:TenantId"]!, configuration["AgentIdentity:ClientId"]!);
+
+webAppBuilder.Services.AddAuthorizationBuilder()
+    .AddPolicy("BotFrameworkPolicy", policy =>
+    {
+        policy.AuthenticationSchemes.Add("Bot");
+        policy.RequireAuthenticatedUser();
+    })
+    .AddPolicy("AgenticPolicy", policy =>
+    {
+        policy.AuthenticationSchemes.Add("Agent");
+        policy.RequireAuthenticatedUser();
+    });
+
+
+//webAppBuilder.Services.AddBotApplicationClients("BotIdentity");
+webAppBuilder.Services.AddBotApplicationClients("AgentIdentity");
 webAppBuilder.Services.AddBotApplication<MyBotApplication>();
 webAppBuilder.Services.AddBotApplication<MyAgentApplication>();
 
 WebApplication webApp = webAppBuilder.Build();
-webApp.UseBotApplication<MyBotApplication>("api/bot/messages", "Bot");
-webApp.UseBotApplication<MyAgentApplication>("api/messages", "Agent");
+webApp.UseBotApplication<MyBotApplication>("api/bot/messages", "BotFrameworkPolicy");
+webApp.UseBotApplication<MyAgentApplication>("api/messages", "AgenticPolicy");
 
 webApp.Run();
-
-internal class MyBotApplication : BotApplication
-{
-    public MyBotApplication() : base() { }
-    public MyBotApplication(IConfiguration config, ILogger<BotApplication> logger)
-        : base(config, logger)
-    {
-        OnMessage = async activity =>
-        {
-            Activity reply = activity.CreateReplyActivity($"you said {activity.Text}, with ❤️ at {DateTime.Now:T}");
-            await SendActivityAsync(reply);
-        };
-    }
-}
-
-internal class MyAgentApplication : BotApplication
-{
-    public MyAgentApplication() : base() { }
-    public MyAgentApplication(IConfiguration config, ILogger<BotApplication> logger)
-        : base(config, logger)
-    {
-        OnMessage = async activity =>
-        {
-            Activity reply = activity.CreateReplyActivity($"Agent received your message: {activity.Text}, at {DateTime.Now:T}");
-            await SendActivityAsync(reply);
-        };
-    }
-}
