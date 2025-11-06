@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
@@ -12,12 +12,43 @@ namespace Rido.BFLite.Core.Hosting;
 
 public static class JwtExtensions
 {
-
     public static AuthenticationBuilder AddBotAuthentication(this IServiceCollection services, string aadSectionName = "AzureAd")
     {
         var authenticationBuilder = services.AddAuthentication();
         var configuration = services.BuildServiceProvider().GetRequiredService<IConfiguration>();
-        authenticationBuilder.AddBotAgentAuthentication(configuration, aadSectionName);
+        //string agentScope = configuration[$"{aadSectionName}:AgentScope"]!;
+        string audience = configuration[$"{aadSectionName}:ClientId"]!;
+        string tenantId = configuration[$"{aadSectionName}:TenantId"]!;
+
+        services
+            .AddAuthentication()
+            .AddCustomJwtBearer("Bot", "botframework.com", audience)
+            .AddCustomJwtBearer("Agent", tenantId, audience);
+        return authenticationBuilder;
+    }
+
+    public static AuthenticationBuilder AddBotAuthenticationEx(this IServiceCollection services, IEnumerable<string> aadSectionNames)
+    {
+        var authenticationBuilder = services.AddAuthentication();
+        foreach (var aadSectionName in aadSectionNames)
+        {
+            var configuration = services.BuildServiceProvider().GetRequiredService<IConfiguration>();
+            string agentScope = configuration[$"{aadSectionName}:AgentScope"]!;
+            string audience = configuration[$"{aadSectionName}:ClientId"]!;
+            string tenantId = configuration[$"{aadSectionName}:TenantId"]!;
+            bool isBot = agentScope.Equals("https://api.botframework.com/.default", StringComparison.OrdinalIgnoreCase);
+
+            if (isBot)
+            {;
+                authenticationBuilder.AddCustomJwtBearer(aadSectionName + "_Bot", "botframework.com", audience);
+            }
+            else
+            {
+
+                authenticationBuilder.AddCustomJwtBearer(aadSectionName + "_Agent", tenantId, audience);
+            }
+
+        }
         return authenticationBuilder;
     }
 
@@ -25,40 +56,38 @@ public static class JwtExtensions
     {
         var authorizationBuilder = services
             .AddAuthorizationBuilder()
-            .AddDefaultPolicy("Bot", policy =>
+            .AddDefaultPolicy("DefaultPolicy", policy =>
             {
                 policy.AuthenticationSchemes.Add("Bot");
-                policy.RequireAuthenticatedUser();
-            });
-        return authorizationBuilder;
-    }
-
-    public static AuthorizationBuilder AddAgentAuthorization(this IServiceCollection services)
-    {
-        var authorizationBuilder = services
-            .AddAuthorizationBuilder()
-            .AddDefaultPolicy("Agent", policy =>
-            {
                 policy.AuthenticationSchemes.Add("Agent");
                 policy.RequireAuthenticatedUser();
             });
         return authorizationBuilder;
     }
 
-    public static AuthenticationBuilder AddBotAgentAuthentication(this AuthenticationBuilder builder, IConfiguration configuration, string aadSectionName = "AzureAd")
+    public static AuthorizationBuilder AddBotAuthorizationEx(this IServiceCollection services, IEnumerable<string> aadSectionNames)
     {
-        string agentScope = configuration[$"{aadSectionName}:AgentScope"]!;
-        string audience = configuration[$"{aadSectionName}:ClientId"]!;
-        if (string.IsNullOrEmpty(agentScope) || agentScope.Equals("https://api.botframework.com/.default", StringComparison.OrdinalIgnoreCase)) {
+        var configuration = services.BuildServiceProvider().GetRequiredService<IConfiguration>();
 
-            builder.AddCustomJwtBearer("Bot", "botframework.com", audience);
-        }
-        else
+        var authorizationBuilder = services.AddAuthorizationBuilder();
+        foreach (var aadSectionName in aadSectionNames)
         {
-            string tenantId = configuration[$"{aadSectionName}:TenantId"]!;
-            builder.AddCustomJwtBearer("Agent", tenantId, audience);
+            string agentScope = configuration[$"{aadSectionName}:AgentScope"]!;
+            bool isBot = agentScope.Equals("https://api.botframework.com/.default", StringComparison.OrdinalIgnoreCase);
+            authorizationBuilder = authorizationBuilder.AddDefaultPolicy("DefaultPolicy", policy =>
+            {
+                if (isBot)
+                {
+                    policy.AuthenticationSchemes.Add(aadSectionName + "_Bot");
+                }
+                else
+                {
+                    policy.AuthenticationSchemes.Add(aadSectionName + "_Agent");
+                }
+                policy.RequireAuthenticatedUser();
+            });
         }
-        return builder;
+        return authorizationBuilder;
     }
 
     public static AuthenticationBuilder AddCustomJwtBearer(this AuthenticationBuilder builder, string schemeName, string tenantId, string audience)
@@ -69,7 +98,7 @@ public static class JwtExtensions
 
         string[] validIssuers = tenantId.Equals("botframework.com", StringComparison.OrdinalIgnoreCase)
             ? ["https://api.botframework.com"]
-            : [$"https://sts.windows.net/{tenantId}/", $"https://login.microsoftonline.com/{tenantId}/v2"];
+            : [$"https://sts.windows.net/{tenantId}/", $"https://login.microsoftonline.com/{tenantId}/v2", "https://api.botframework.com"];
 
         builder.AddJwtBearer(schemeName, jwtOptions =>
          {
@@ -87,13 +116,13 @@ public static class JwtExtensions
              };
              jwtOptions.TokenValidationParameters.EnableAadSigningKeyIssuerValidation();
              jwtOptions.MapInboundClaims = true;
-             //jwtOptions.Events = jwtEvents;
+             // jwtOptions.Events = jwtEvents;
              jwtOptions.Validate();
          });
         return builder;
     }
 
-    readonly static JwtBearerEvents jwtEvents = new JwtBearerEvents
+    readonly static JwtBearerEvents jwtEvents = new()
     {
         OnMessageReceived = context =>
         {
