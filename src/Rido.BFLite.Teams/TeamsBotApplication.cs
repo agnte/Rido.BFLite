@@ -13,7 +13,7 @@ public class TeamsBotApplication : BotApplication
     {
     }
 
-    public TeamsBotApplication(IConfiguration config, ILogger<BotApplication> logger) : base(config, logger)
+    public TeamsBotApplication(IConfiguration config, ILogger<BotApplication> logger, string serviceKey = "AzureAd") : base(config, logger, serviceKey)
     {
         OnActivity += (sender, args) =>
         {

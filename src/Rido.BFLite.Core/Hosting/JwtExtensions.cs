@@ -35,12 +35,12 @@ public static class JwtExtensions
     public static AuthenticationBuilder AddBotAuthenticationEx(this IServiceCollection services, IEnumerable<string> aadSectionNames)
     {
         var authenticationBuilder = services.AddAuthentication();
-        List<string> audiences = new List<string>();
-        List<string> tenants = new List<string>();
+        List<string> audiences = [];
+        List<string> tenants = [];
         foreach (var aadSectionName in aadSectionNames)
         {
             var configuration = services.BuildServiceProvider().GetRequiredService<IConfiguration>();
-            string agentScope = configuration[$"{aadSectionName}:AgentScope"]!;
+            // string agentScope = configuration[$"{aadSectionName}:AgentScope"]!;
             string audience = configuration[$"{aadSectionName}:ClientId"]!;
             string tenantId = configuration[$"{aadSectionName}:TenantId"]!;
             audiences.Add(audience);

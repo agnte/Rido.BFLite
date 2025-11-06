@@ -4,8 +4,8 @@ using Rido.BFLite.Core.Schema;
 internal class MyBotApplication : BotApplication
 {
     public MyBotApplication() : base() { }
-    public MyBotApplication(IConfiguration config, ILogger<BotApplication> logger)
-        : base(config, logger)
+    public MyBotApplication(IConfiguration config, ILogger<BotApplication> logger, string serviceKey)
+        : base(config, logger, serviceKey)
     {
         OnMessage = async activity =>
         {

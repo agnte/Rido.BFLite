@@ -24,11 +24,11 @@ public class ConversationClient(
         activity.From!.Properties.TryGetValue("tenantId", out object? tenantId);
 
         using HttpClient httpClient = httpClientFactory.CreateClient();
-        AuthorizationHeaderProviderOptions options = new AuthorizationHeaderProviderOptions()
+        AuthorizationHeaderProviderOptions options = new()
         {
             AcquireTokenOptions = new AcquireTokenOptions()
             {
-                AuthenticationOptionsName = "Bearer",
+                AuthenticationOptionsName = aadConfigSectionName,
             }
         };
         

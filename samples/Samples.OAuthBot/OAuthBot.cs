@@ -8,7 +8,7 @@ public class OAuthBot : BotApplication
 {
     public OAuthBot() { }
 
-    public OAuthBot(IConfiguration config, ILogger<OAuthBot> logger) : base(config, logger)
+    public OAuthBot(IConfiguration config, ILogger<OAuthBot> logger) : base(config, logger, "")
     {
         base.OnMessage = async activity =>
         {
