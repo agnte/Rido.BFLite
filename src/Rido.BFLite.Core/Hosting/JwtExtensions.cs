@@ -4,8 +4,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Microsoft.Graph;
+using Microsoft.IdentityModel.Protocols;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.IdentityModel.Validators;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace Rido.BFLite.Core.Hosting;
 
@@ -30,25 +35,18 @@ public static class JwtExtensions
     public static AuthenticationBuilder AddBotAuthenticationEx(this IServiceCollection services, IEnumerable<string> aadSectionNames)
     {
         var authenticationBuilder = services.AddAuthentication();
+        List<string> audiences = new List<string>();
+        List<string> tenants = new List<string>();
         foreach (var aadSectionName in aadSectionNames)
         {
             var configuration = services.BuildServiceProvider().GetRequiredService<IConfiguration>();
             string agentScope = configuration[$"{aadSectionName}:AgentScope"]!;
             string audience = configuration[$"{aadSectionName}:ClientId"]!;
             string tenantId = configuration[$"{aadSectionName}:TenantId"]!;
-            bool isBot = agentScope.Equals("https://api.botframework.com/.default", StringComparison.OrdinalIgnoreCase);
-
-            if (isBot)
-            {;
-                authenticationBuilder.AddCustomJwtBearer(aadSectionName + "_Bot", "botframework.com", audience);
-            }
-            else
-            {
-
-                authenticationBuilder.AddCustomJwtBearer(aadSectionName + "_Agent", tenantId, audience);
-            }
-
+            audiences.Add(audience);
+            tenants.Add(tenantId);
         }
+        authenticationBuilder.AddCustomJwtBearerEx("BotAndAgentScheme", tenants, audiences);
         return authenticationBuilder;
     }
 
@@ -65,30 +63,19 @@ public static class JwtExtensions
         return authorizationBuilder;
     }
 
-    public static AuthorizationBuilder AddBotAuthorizationEx(this IServiceCollection services, IEnumerable<string> aadSectionNames)
+    public static AuthorizationBuilder AddBotAuthorizationEx(this IServiceCollection services)
     {
         var configuration = services.BuildServiceProvider().GetRequiredService<IConfiguration>();
 
         var authorizationBuilder = services.AddAuthorizationBuilder();
-        foreach (var aadSectionName in aadSectionNames)
+        authorizationBuilder = authorizationBuilder.AddDefaultPolicy("DefaultPolicy", policy =>
         {
-            string agentScope = configuration[$"{aadSectionName}:AgentScope"]!;
-            bool isBot = agentScope.Equals("https://api.botframework.com/.default", StringComparison.OrdinalIgnoreCase);
-            authorizationBuilder = authorizationBuilder.AddDefaultPolicy("DefaultPolicy", policy =>
-            {
-                if (isBot)
-                {
-                    policy.AuthenticationSchemes.Add(aadSectionName + "_Bot");
-                }
-                else
-                {
-                    policy.AuthenticationSchemes.Add(aadSectionName + "_Agent");
-                }
-                policy.RequireAuthenticatedUser();
-            });
-        }
+            policy.AuthenticationSchemes.Add("BotAndAgentScheme");
+            policy.RequireAuthenticatedUser();
+        });
         return authorizationBuilder;
     }
+
 
     public static AuthenticationBuilder AddCustomJwtBearer(this AuthenticationBuilder builder, string schemeName, string tenantId, string audience)
     {
@@ -121,6 +108,97 @@ public static class JwtExtensions
          });
         return builder;
     }
+
+    public static AuthenticationBuilder AddCustomJwtBearerEx(this AuthenticationBuilder builder, string schemeName, IEnumerable<string> tenants, IEnumerable<string> audiences)
+    {
+        //string metadataAddress = tenantId.Equals("botframework.com", StringComparison.OrdinalIgnoreCase)
+        //    ? "https://login.botframework.com/v1/.well-known/openidconfiguration"
+        //    : $"https://login.microsoftonline.com/{tenantId}/v2.0/.well-known/openid-configuration";
+
+        List<string> validIssuers = ["https://api.botframework.com"];
+
+        foreach (var tenantId in tenants)
+        {
+            validIssuers.Add($"https://sts.windows.net/{tenantId}/");
+            validIssuers.Add($"https://login.microsoftonline.com/{tenantId}/v2");
+        }
+
+        builder.AddJwtBearer(schemeName, jwtOptions =>
+        {
+            jwtOptions.SaveToken = true;
+            jwtOptions.IncludeErrorDetails = true;
+            //jwtOptions.MetadataAddress = metadataAddress;
+            jwtOptions.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidAudiences = audiences,
+                ValidateIssuerSigningKey = true,
+                RequireSignedTokens = true,
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidIssuers = validIssuers
+            };
+            jwtOptions.TokenValidationParameters.EnableAadSigningKeyIssuerValidation();
+            jwtOptions.MapInboundClaims = true;
+            jwtOptions.Events = new JwtBearerEvents
+            {
+                OnMessageReceived = async context =>
+                {
+                    string authorizationHeader = context.Request.Headers.Authorization.ToString();
+
+                    if (string.IsNullOrEmpty(authorizationHeader))
+                    {
+                        // Default to AadTokenValidation handling
+                        context.Options.TokenValidationParameters.ConfigurationManager ??= jwtOptions.ConfigurationManager as BaseConfigurationManager;
+                        await Task.CompletedTask.ConfigureAwait(false);
+                        return;
+                    }
+
+                    string[] parts = authorizationHeader?.Split(' ')!;
+                    if (parts.Length != 2 || parts[0] != "Bearer")
+                    {
+                        // Default to AadTokenValidation handling
+                        context.Options.TokenValidationParameters.ConfigurationManager ??= jwtOptions.ConfigurationManager as BaseConfigurationManager;
+                        await Task.CompletedTask.ConfigureAwait(false);
+                        return;
+                    }
+
+                    JwtSecurityToken token = new(parts[1]);
+                    string issuer = token.Claims.FirstOrDefault(claim => claim.Type == "iss")?.Value!;
+                    string tid = token.Claims.FirstOrDefault(claim => claim.Type == "tid")?.Value!;
+
+                    string oidcAuthority = issuer.Equals("https://api.botframework.com", StringComparison.OrdinalIgnoreCase)
+                        ? "https://login.botframework.com/v1/.well-known/openid-configuration"
+                        : $"https://login.microsoftonline.com/{tid ?? "botframework.com"}/v2.0/.well-known/openid-configuration";
+
+                    jwtOptions.ConfigurationManager = new ConfigurationManager<OpenIdConnectConfiguration>(
+                        oidcAuthority,
+                        new OpenIdConnectConfigurationRetriever(),
+                        new HttpDocumentRetriever
+                        {
+                            RequireHttps = jwtOptions.RequireHttpsMetadata
+                        });
+
+
+                    await Task.CompletedTask.ConfigureAwait(false);
+                },
+                OnTokenValidated = context =>
+                {
+                    return Task.CompletedTask;
+                },
+                OnForbidden = context =>
+                {
+                    return Task.CompletedTask;
+                },
+                OnAuthenticationFailed = context =>
+                {
+                    return Task.CompletedTask;
+                }
+            };
+            jwtOptions.Validate();
+        });
+        return builder;
+    }
+
 
     readonly static JwtBearerEvents jwtEvents = new()
     {

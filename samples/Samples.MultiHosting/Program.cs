@@ -2,7 +2,7 @@
 
 WebApplicationBuilder webAppBuilder = WebApplication.CreateSlimBuilder(args);
 webAppBuilder.Services.AddBotAuthenticationEx(["BotIdentity", "AgentIdentity"]);
-webAppBuilder.Services.AddBotAuthorizationEx(["BotIdentity", "AgentIdentity"]);
+webAppBuilder.Services.AddBotAuthorizationEx();
 
 //webAppBuilder.Services.AddBotApplicationClients("BotIdentity");
 webAppBuilder.Services.AddBotApplicationClients("AgentIdentity");
