@@ -491,7 +491,7 @@ public class UserTokenClientTests : IDisposable
     }
 
     [Fact]
-    public async Task Configuration_IsCorrectlyInjected()
+    public void Configuration_IsCorrectlyInjected()
     {
         // Arrange & Act
         IConfiguration configuration = _serviceProvider.GetRequiredService<IConfiguration>();
@@ -502,7 +502,7 @@ public class UserTokenClientTests : IDisposable
     }
 
     [Fact]
-    public async Task HttpClientFactory_CreatesNamedClient()
+    public void HttpClientFactory_CreatesNamedClient()
     {
         // Arrange & Act
         IHttpClientFactory httpClientFactory = _serviceProvider.GetRequiredService<IHttpClientFactory>();

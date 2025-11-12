@@ -9,8 +9,8 @@ webAppBuilder.Services.AddBotAuthorizationEx();
 webAppBuilder.Services.AddBotApplicationClients("BotIdentity");
 webAppBuilder.Services.AddBotApplicationClients("AgentIdentity");
 
-var botApp = new MyBotApplication(webAppBuilder.Configuration, NullLogger<BotApplication>.Instance, "BotIdentity");
-var agentApp = new MyAgentApplication(webAppBuilder.Configuration, NullLogger<BotApplication>.Instance, "AgentIdentity");
+MyBotApplication botApp = new(webAppBuilder.Configuration, NullLogger<BotApplication>.Instance, "BotIdentity");
+MyAgentApplication agentApp = new(webAppBuilder.Configuration, NullLogger<BotApplication>.Instance, "AgentIdentity");
 
 webAppBuilder.Services.AddBotApplication(botApp);
 webAppBuilder.Services.AddBotApplication(agentApp);
