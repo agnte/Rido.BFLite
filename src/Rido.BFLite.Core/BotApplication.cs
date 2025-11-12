@@ -4,7 +4,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Rido.BFLite.Core.Schema;
-using Rido.BFLite.Core;
 using System.Text.Json;
 
 namespace Rido.BFLite.Core;
@@ -21,18 +20,20 @@ public class BotApplication
     private readonly IConfiguration _configuration;
     private ConversationClient? _conversationClient;
     private UserTokenClient? _userTokenClient;
-
+    private readonly string _serviceKey;
     public BotApplication()
     {
         _logger = NullLogger<BotApplication>.Instance;
         _configuration = new ConfigurationBuilder().Build();
+        _serviceKey = "AzureAd";
     }
 
-    public BotApplication(IConfiguration config, ILogger<BotApplication> logger)
+    public BotApplication(IConfiguration config, ILogger<BotApplication> logger, string serviceKey = "AzureAd")
     {
         _logger = logger;
         _configuration = config;
-        logger.LogInformation("Started bot listener on {port} for AppID:{appid}", config["ASPNETCORE_URLS"], config["AzureAd:ClientId"]);
+        _serviceKey = serviceKey;
+        logger.LogInformation("Started bot listener on {port} for AppID:{appid}", config["ASPNETCORE_URLS"], config[$"{_serviceKey}:ClientId"]);
     }
 
     public UserTokenClient UserTokenClient => _userTokenClient ?? throw new Exception("UserTokenClient not initialized");
@@ -42,12 +43,12 @@ public class BotApplication
     public Func<Activity, Task>? OnMessage { get; set; }
     public Func<MessageReactionActivityWrapper, Task>? OnMessageReaction { get; set; }
     public Func<ConversationUpdateActivityWrapper, Task>? OnConversationUpdate { get; set; }
-
     
 
     internal async Task<string> ProcessAsync(HttpContext httpContext)
     {
-        _conversationClient = httpContext.RequestServices.GetService<ConversationClient>() ?? throw new Exception("ConversationClient not registered");
+        _conversationClient = httpContext.RequestServices.GetKeyedService<ConversationClient>(_serviceKey) ?? throw new Exception("ConversationClient not registered");
+        
         _userTokenClient = httpContext.RequestServices.GetService<UserTokenClient>() ?? throw new Exception("UserTokenClient not registered");
 
         Activity activity = await ParseActivityAsync(httpContext.Request.Body) ?? throw new InvalidOperationException("Invalid Activity");

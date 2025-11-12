@@ -13,6 +13,9 @@
     <Project Path="test/Rido.BFLite.Teams.Tests/Rido.BFLite.Teams.Tests.csproj" />
   </Folder>
   <Project Path="samples/Samples.BotEcho/Samples.EchoBot.csproj" />
+  <Project Path="samples/Samples.MultiHosting/Samples.MultiHosting.csproj" Id="ec6f1134-6da6-44d8-b46b-bb9dd8a60789">
+    <Build Solution="Debug|*" Project="false" />
+  </Project>
   <Project Path="samples/Samples.OAuthBot/Samples.OAuthBot.csproj" Id="48d21d01-db75-4705-8fd7-7e86b6e18b90" />
   <Project Path="src/Rido.BFLite.Core/Rido.BFLite.Core.csproj" />
   <Project Path="src/Rido.BFLite.Teams/Rido.BFLite.Teams.csproj" />

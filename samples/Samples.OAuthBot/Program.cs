@@ -2,8 +2,10 @@ using Rido.BFLite.Core.Hosting;
 using Samples.OAuthBot;
 
 WebApplicationBuilder webAppBuilder = WebApplication.CreateSlimBuilder(args);
-webAppBuilder.Services.AddBotFrameworkAuthentication();
-webAppBuilder.Services.AddMessageLoop<OAuthBot>();
+webAppBuilder.Services.AddBotAuthentication();
+webAppBuilder.Services.AddBotAuthorization();
+webAppBuilder.Services.AddBotApplicationClients();
+webAppBuilder.Services.AddBotApplication<OAuthBot>();
 WebApplication webApp = webAppBuilder.Build();
 webApp.UseBotApplication<OAuthBot>();
 webApp.Run();
