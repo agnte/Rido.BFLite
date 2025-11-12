@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.Identity.Abstractions;
+using Microsoft.Identity.Web;
 using Rido.BFLite.Core.Schema;
 using System.Text;
 using System.Text.Json;
@@ -82,6 +84,8 @@ public class UserTokenClient(
     private readonly string _apiEndpoint = "https://token.botframework.com";
     private readonly string _scopes = configuration["AzureAd:AgentScope"]!; // "https://api.botframework.com/.default";
     private readonly JsonSerializerOptions _defaultOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+
+    internal AgenticIdentity? AgenticIdentity { get; set; }
 
     public async Task<IUserTokenClient.GetTokenResult> GetTokenAsync(string userId, string connectionName, string channelId, string? code = null)
     {
@@ -220,62 +224,68 @@ public class UserTokenClient(
 
     private async Task<string?> CallApiAsync(string endpoint, Dictionary<string, string?> queryParams, HttpMethod? method = null, string? body = "")
     {
-        try
+
+        string configuredScope = configuration["AzureAd:AgentScope"]!;
+        bool useAgenticIdentity = !configuredScope.Equals("https://api.botframework.com/.default", StringComparison.OrdinalIgnoreCase);
+
+        AuthorizationHeaderProviderOptions options = new AuthorizationHeaderProviderOptions();
+
+        string tokenValue;
+        if (useAgenticIdentity)
         {
-            // Capture the authorization header provider reference at the start of the method
-            // to avoid accessing it after potential scope disposal
-            var currentAuthProvider = authorizationHeaderProvider ?? throw new ObjectDisposedException(nameof(IAuthorizationHeaderProvider), "Authorization header provider is not available.");
-            var authHeader = await currentAuthProvider.CreateAuthorizationHeaderForAppAsync(_scopes);
-            var httpClient = httpClientFactory.CreateClient("ApiClient");
-            httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", authHeader);
-            var fullPath = $"{_apiEndpoint}/{endpoint}";
-            var requestUri = QueryHelpers.AddQueryString(fullPath, queryParams);
-            _logger.LogInformation("Calling API endpoint: {Endpoint}", requestUri);
-
-            var httpMethod = method ?? HttpMethod.Get;
-            var request = new HttpRequestMessage(httpMethod, requestUri);
-
-            if (httpMethod == HttpMethod.Post && !string.IsNullOrEmpty(body))
+            if (AgenticIdentity is null || string.IsNullOrEmpty(AgenticIdentity.AgentticAppId) || string.IsNullOrEmpty(AgenticIdentity.AgenticUserId))
             {
-                request.Content = new StringContent(body, Encoding.UTF8, "application/json");
+                throw new InvalidOperationException("Agentic identity is not set for UserTokenClient.");
             }
+            options.WithAgentUserIdentity(AgenticIdentity.AgentticAppId, Guid.Parse(AgenticIdentity.AgenticUserId));
+            var token = await authorizationHeaderProvider.CreateAuthorizationHeaderAsync([_scopes], options);
+            tokenValue = token["Bearer ".Length..];
+        }
+        else
+        {
+            var token = await authorizationHeaderProvider.CreateAuthorizationHeaderForAppAsync(_scopes, options);
+            tokenValue = token["Bearer ".Length..];
+        }
+        var httpClient = httpClientFactory.CreateClient("ApiClient");
+        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", tokenValue);
+        var fullPath = $"{_apiEndpoint}/{endpoint}";
+        var requestUri = QueryHelpers.AddQueryString(fullPath, queryParams);
+        _logger.LogInformation("Calling API endpoint: {Endpoint}", requestUri);
 
-            var response = await httpClient.SendAsync(request);
+        var httpMethod = method ?? HttpMethod.Get;
+        var request = new HttpRequestMessage(httpMethod, requestUri);
 
-            if (response.IsSuccessStatusCode)
+        if (httpMethod == HttpMethod.Post && !string.IsNullOrEmpty(body))
+        {
+            request.Content = new StringContent(body, Encoding.UTF8, "application/json");
+        }
+
+        var response = await httpClient.SendAsync(request);
+
+        if (response.IsSuccessStatusCode)
+        {
+            var content = await response.Content.ReadAsStringAsync();
+            _logger.LogInformation("API call successful. Status: {StatusCode}", response.StatusCode);
+            return content;
+        }
+        else
+        {
+            var errorContent = await response.Content.ReadAsStringAsync();
+
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
-                var content = await response.Content.ReadAsStringAsync();
-                _logger.LogInformation("API call successful. Status: {StatusCode}", response.StatusCode);
-                return content;
+                _logger.LogWarning("User Token not found: {Endpoint}", requestUri);
+                return null!;
+                //throw new HttpRequestException($"API endpoint not found: {requestUri}", null, response.StatusCode);
             }
             else
             {
-                var errorContent = await response.Content.ReadAsStringAsync();
-
-                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-                {
-                    _logger.LogWarning("User Token not found: {Endpoint}", requestUri);
-                    return null!;
-                    //throw new HttpRequestException($"API endpoint not found: {requestUri}", null, response.StatusCode);
-                }
-                else
-                {
-                    _logger.LogError("API call failed. Status: {StatusCode}, Error: {Error}",
-                        response.StatusCode, errorContent);
-                    throw new HttpRequestException($"API call failed with status {response.StatusCode}: {errorContent}");
-                }
+                _logger.LogError("API call failed. Status: {StatusCode}, Error: {Error}",
+                    response.StatusCode, errorContent);
+                throw new HttpRequestException($"API call failed with status {response.StatusCode}: {errorContent}");
             }
         }
-        catch (ObjectDisposedException ex) when (ex.ObjectName == "IServiceProvider")
-        {
-            _logger.LogError(ex, "Service provider was disposed while calling API endpoint: {Endpoint}. This usually indicates that the HTTP request scope ended before the async operation completed.", endpoint);
-            throw new InvalidOperationException("Authentication service is not available. The request scope may have ended before the operation completed.", ex);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error calling API");
-            throw;
-        }
+
     }
 
     private async Task<string> CallApiAsync(string endpoint, object body)
