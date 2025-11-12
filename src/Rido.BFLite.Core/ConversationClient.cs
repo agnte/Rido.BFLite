@@ -12,18 +12,26 @@ namespace Rido.BFLite.Core;
 public class ConversationClient(
     IConfiguration configuration,
     IHttpClientFactory httpClientFactory,
-    ILogger<ConversationClient>
-    logger, IAuthorizationHeaderProvider authorizationHeaderProvider)
+    ILogger<ConversationClient> logger, 
+    IAuthorizationHeaderProvider authorizationHeaderProvider,
+    string aadConfigSectionName = "AzureAd")
 {
     public async Task<string> SendActivityAsync(Activity activity, CancellationToken cancellationToken = default)
     {
-        string agentScope = configuration["AzureAd:AgentScope"]!;
+        string agentScope = configuration[$"{aadConfigSectionName}:AgentScope"]!;
         activity.From!.Properties.TryGetValue("agenticAppId", out object? agenticAppId);
         activity.From!.Properties.TryGetValue("agenticUserId", out object? agenticUserId);
         activity.From!.Properties.TryGetValue("tenantId", out object? tenantId);
 
         using HttpClient httpClient = httpClientFactory.CreateClient();
-        AuthorizationHeaderProviderOptions options = new AuthorizationHeaderProviderOptions();
+        AuthorizationHeaderProviderOptions options = new()
+        {
+            AcquireTokenOptions = new AcquireTokenOptions()
+            {
+                AuthenticationOptionsName = aadConfigSectionName,
+            }
+        };
+        
         string token;
         if (agentScope != "https://api.botframework.com/.default" && agenticAppId is not null && agenticUserId is not null)
         {

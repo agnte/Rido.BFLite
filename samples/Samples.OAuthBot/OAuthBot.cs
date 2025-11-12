@@ -8,13 +8,14 @@ public class OAuthBot : BotApplication
 {
     public OAuthBot() { }
 
-    public OAuthBot(IConfiguration config, ILogger<OAuthBot> logger) : base(config, logger)
+    public OAuthBot(IConfiguration config, ILogger<OAuthBot> logger) 
+        : base(config, logger)
     {
         base.OnMessage = async activity =>
         {
-            IUserTokenClient.GetTokenStatusResult tokenStatus = await base.UserTokenClient.GetTokenStatusAsync(activity.From!.Id!, activity.ChannelId!);
             if (activity.Text!.StartsWith("/token"))
             {
+                IUserTokenClient.GetTokenStatusResult tokenStatus = await base.UserTokenClient.GetTokenStatusAsync(activity.From!.Id!, activity.ChannelId!);
                 await base.SendActivityAsync(activity.CreateReplyActivity($"Token status: HasToken={tokenStatus.HasToken}, ConnectionName={tokenStatus.ConnectionName}"));
                 if (tokenStatus.HasToken!.Value == true)
                 {
@@ -30,12 +31,14 @@ public class OAuthBot : BotApplication
             }
             else if (activity.Text!.StartsWith("/login"))
             {
+                IUserTokenClient.GetTokenStatusResult tokenStatus = await base.UserTokenClient.GetTokenStatusAsync(activity.From!.Id!, activity.ChannelId!);
                 IUserTokenClient.GetTokenResult token = await base.UserTokenClient.GetTokenAsync(activity.From!.Id!, tokenStatus.ConnectionName!, activity.ChannelId!, activity.Text[7..]);
                 string res = PrintToken(token);
                 await base.SendActivityAsync(activity.CreateReplyActivity(res));
             }
             else if (activity.Text.StartsWith("/logout"))
             {
+                IUserTokenClient.GetTokenStatusResult tokenStatus = await base.UserTokenClient.GetTokenStatusAsync(activity.From!.Id!, activity.ChannelId!);
                 bool logout = await base.UserTokenClient.SignOutUserAsync(activity.From!.Id!, tokenStatus.ConnectionName);
                 await base.SendActivityAsync(activity.CreateReplyActivity("logged out"));
             }

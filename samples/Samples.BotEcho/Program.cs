@@ -1,15 +1,15 @@
-﻿using Rido.BFLite.Core;
-using Rido.BFLite.Core.Hosting;
+﻿using Rido.BFLite.Core.Hosting;
 using Rido.BFLite.Core.Schema;
 using Rido.BFLite.Teams;
 
 WebApplicationBuilder webAppBuilder = WebApplication.CreateSlimBuilder(args);
-webAppBuilder.Services.AddBotFrameworkAuthentication();
-webAppBuilder.Services.AddMessageLoop<TeamsBotApplication>();
+webAppBuilder.Services.AddBotAuthentication();
+webAppBuilder.Services.AddBotAuthorization();
+webAppBuilder.Services.AddBotApplicationClients();
+webAppBuilder.Services.AddBotApplication<TeamsBotApplication>();
 WebApplication webApp = webAppBuilder.Build();
 TeamsBotApplication botApp = webApp.UseBotApplication<TeamsBotApplication>();
 
-// await botApp.CheckConfigAsync();
 botApp.OnMessage = async activity =>
 {
     Activity reply = activity.CreateReplyActivity($"you said {activity.Text}, with ❤️ at {DateTime.Now:T}");
