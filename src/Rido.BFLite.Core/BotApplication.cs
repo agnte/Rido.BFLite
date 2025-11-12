@@ -52,7 +52,7 @@ public class BotApplication
         _userTokenClient = httpContext.RequestServices.GetService<UserTokenClient>() ?? throw new Exception("UserTokenClient not registered");
 
         Activity activity = await ParseActivityAsync(httpContext.Request.Body) ?? throw new InvalidOperationException("Invalid Activity");
-        AgenticIdentity agenticIdentity = AgenticIdentity.FromProperties(activity.From!.Properties!);
+        AgenticIdentity agenticIdentity = AgenticIdentity.FromProperties(activity.Recipient!.Properties!);
 
         _userTokenClient.AgenticIdentity = agenticIdentity;
 

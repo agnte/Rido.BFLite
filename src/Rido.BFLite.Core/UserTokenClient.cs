@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.Identity.Abstractions;
 using Microsoft.Identity.Web;
 using Rido.BFLite.Core.Schema;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 
@@ -72,6 +73,8 @@ public interface IUserTokenClient
     /// Gets AAD tokens for a user.
     /// </summary>
     Task<string> GetAadTokensAsync(string userId, string connectionName, string channelId, string[]? resourceUrls = null);
+
+    public AgenticIdentity? AgenticIdentity { get; set; }
 }
 
 public class UserTokenClient(
@@ -82,10 +85,10 @@ public class UserTokenClient(
 {
     private readonly ILogger<UserTokenClient> _logger = logger;
     private readonly string _apiEndpoint = "https://token.botframework.com";
-    private readonly string _scopes = configuration["AzureAd:AgentScope"]!; // "https://api.botframework.com/.default";
+    private readonly string _scopes = "https://api.botframework.com/.default";
     private readonly JsonSerializerOptions _defaultOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
-    internal AgenticIdentity? AgenticIdentity { get; set; }
+    public AgenticIdentity? AgenticIdentity { get; set; }
 
     public async Task<IUserTokenClient.GetTokenResult> GetTokenAsync(string userId, string connectionName, string channelId, string? code = null)
     {
@@ -228,8 +231,11 @@ public class UserTokenClient(
         string configuredScope = configuration["AzureAd:AgentScope"]!;
         bool useAgenticIdentity = !configuredScope.Equals("https://api.botframework.com/.default", StringComparison.OrdinalIgnoreCase);
 
-        AuthorizationHeaderProviderOptions options = new AuthorizationHeaderProviderOptions();
-
+        AuthorizationHeaderProviderOptions options = new();
+        options.AcquireTokenOptions = new AcquireTokenOptions()
+        {
+            AuthenticationOptionsName = "AzureAd",
+        };
         string tokenValue;
         if (useAgenticIdentity)
         {
@@ -247,7 +253,7 @@ public class UserTokenClient(
             tokenValue = token["Bearer ".Length..];
         }
         var httpClient = httpClientFactory.CreateClient("ApiClient");
-        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", tokenValue);
+        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokenValue);
         var fullPath = $"{_apiEndpoint}/{endpoint}";
         var requestUri = QueryHelpers.AddQueryString(fullPath, queryParams);
         _logger.LogInformation("Calling API endpoint: {Endpoint}", requestUri);

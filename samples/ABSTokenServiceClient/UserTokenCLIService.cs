@@ -13,6 +13,12 @@ namespace ABSTokenServiceClient
     {
         public Task StartAsync(CancellationToken cancellationToken)
         {
+            userTokenClient.AgenticIdentity = new AgenticIdentity()
+            {
+                AgentticAppId = "f30805e3-3457-4c6e-a0e7-bf0fd623f887",
+                AgenticUserId = "715d0396-3a7a-4d44-800d-225d04e4d510",
+                AgenticAppBlueprintId = ""
+            };
             return ExecuteAsync(cancellationToken);
         }
 
@@ -23,7 +29,8 @@ namespace ABSTokenServiceClient
 
         protected async  Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            const string userId = "29:10n4Hk6RsMPuLvAxMNd2zEYU2w1dpvsiLC4QcffJ84rCMp_TKJO_dMzosR4d_K67eAumKyxTzXVYqHQWzRf2ukg";
+            //"29:1zEO_D4ExqMVy0N4u4O66aGLq7rKOovkO8X0c3Ww7h50DXLpj2yCsvFA60Ns_fX7LHTQdULeM2xoCkWFeLe1ktQ"
+            const string userId = "29:1zEO_D4ExqMVy0N4u4O66aGLq7rKOovkO8X0c3Ww7h50DXLpj2yCsvFA60Ns_fX7LHTQdULeM2xoCkWFeLe1ktQ";
             const string connectionName = "graph";
             const string channelId = "msteams";
 
