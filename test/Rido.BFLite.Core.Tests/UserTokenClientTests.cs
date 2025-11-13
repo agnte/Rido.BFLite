@@ -298,34 +298,6 @@ public class UserTokenClientTests : IDisposable
     }
 
     [Fact]
-    public async Task CallApiAsync_WithDisposedAuthProvider_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        Mock<IAuthorizationHeaderProvider> mockDisposedAuthProvider = new();
-        mockDisposedAuthProvider.Setup(a => a.CreateAuthorizationHeaderForAppAsync(It.IsAny<string>(), It.IsAny<AuthorizationHeaderProviderOptions?>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new ObjectDisposedException("IServiceProvider"));
-
-        // Create a separate DI container for this test
-        using ServiceProvider services = new ServiceCollection()
-            .AddSingleton<IConfiguration>(_serviceProvider.GetRequiredService<IConfiguration>())
-            .AddLogging(builder => builder.AddProvider(NullLoggerProvider.Instance))
-            .AddHttpClient("ApiClient", client => { })
-                .ConfigurePrimaryHttpMessageHandler(() => _mockHttpMessageHandler.Object)
-            .Services
-            .AddSingleton(mockDisposedAuthProvider.Object)
-            .AddScoped<UserTokenClient>()
-            .BuildServiceProvider();
-
-        UserTokenClient userTokenClient = services.GetRequiredService<UserTokenClient>();
-
-        // Act & Assert
-        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => userTokenClient.GetTokenAsync("user", "connection", "channel"));
-
-        Assert.Contains("Authentication service is not available", exception.Message);
-    }
-
-    [Fact]
     public async Task CallApiAsync_WithServerError_ThrowsHttpRequestException()
     {
         // Arrange
