@@ -85,7 +85,7 @@ public class UserTokenClient(
 {
     private readonly ILogger<UserTokenClient> _logger = logger;
     private readonly string _apiEndpoint = "https://token.botframework.com";
-    private readonly string _scopes = "https://api.botframework.com/.default";
+    private readonly string _scopes = "https://api.botframework.com/.default"; //"8d2d3342-cf29-4959-9577-0e0eafbd16bc/.default"
     private readonly JsonSerializerOptions _defaultOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
     public AgenticIdentity? AgenticIdentity { get; set; }
