@@ -2,6 +2,7 @@
   <Folder Name="/Solution Items/">
     <File Path=".gitignore" />
     <File Path="Directory.Build.props" />
+    <File Path="docs/agentic-setup.md" />
     <File Path="version.json" />
   </Folder>
   <Folder Name="/tamples/">
