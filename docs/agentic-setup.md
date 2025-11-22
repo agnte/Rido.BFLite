@@ -2,7 +2,13 @@
 
 ## Create the BluePrint
 
-- Install A365 CLI from:
+- Install A365 CLI with
+
+```bash
+dotnet tool install --global Microsoft.Agents.A365.DevTools.Cli --version 1.0.20-preview
+```
+ 
+
 - Create the A365 Blueprint using the following command:
 
 ```bash
