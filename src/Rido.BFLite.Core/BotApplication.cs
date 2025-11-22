@@ -40,6 +40,8 @@ public class BotApplication
 
     public event EventHandler<ActivityEventArgs>? OnActivity;
 
+    public Func<Activity, Task>? OnOnActivity { get; set; }
+
     public Func<Activity, Task>? OnMessage { get; set; }
     public Func<MessageReactionActivityWrapper, Task>? OnMessageReaction { get; set; }
     public Func<ConversationUpdateActivityWrapper, Task>? OnConversationUpdate { get; set; }
@@ -53,7 +55,9 @@ public class BotApplication
         Activity activity = await ParseActivityAsync(httpContext.Request.Body) ?? throw new InvalidOperationException("Invalid Activity");
         using (_logger.BeginScope("Processing activity {Type} {Id}", activity.Type, activity.Id))
         {
-            OnActivity?.Invoke(this, new ActivityEventArgs(activity));
+
+            await OnOnActivity?.Invoke(activity)!;
+            //OnActivity?.Invoke(this, new ActivityEventArgs(activity));
 
             switch (activity.Type)
             {

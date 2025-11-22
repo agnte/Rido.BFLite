@@ -1,15 +1,40 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using System.Text;
-using System.Threading.Tasks;
 using System.Xml;
 
-namespace Rido.BFLite.Compat.Adapter
+namespace Rido.BFLite.Compat.Adapter;
+
+internal static class CompatActivity
 {
+
+    public static Microsoft.Bot.Schema.Activity ToCompatActivity(this Rido.BFLite.Core.Schema.Activity activity)
+    {
+        var json = activity.ToJson();
+        var compatActivity = s_botMessageSerializer.Deserialize<Microsoft.Bot.Schema.Activity>(new JsonTextReader(new System.IO.StringReader(json)))!;
+        return compatActivity;
+    }
+
+    public static Rido.BFLite.Core.Schema.Activity FromCompatActivity(this Microsoft.Bot.Schema.Activity activity)
+    {
+        var sb = new StringBuilder();
+        s_botMessageSerializer.Serialize(new JsonTextWriter(new System.IO.StringWriter(sb)), activity);
+        var compatActivity = Rido.BFLite.Core.Schema.Activity.FromJsonString(sb.ToString());
+        return compatActivity;
+    }
+
+    private static readonly JsonSerializer s_botMessageSerializer = JsonSerializer.Create(new JsonSerializerSettings
+    {
+        NullValueHandling = NullValueHandling.Ignore,
+        Formatting = Newtonsoft.Json.Formatting.Indented,
+        DateFormatHandling = DateFormatHandling.IsoDateFormat,
+        DateTimeZoneHandling = DateTimeZoneHandling.Utc,
+        ReferenceLoopHandling = ReferenceLoopHandling.Serialize,
+        ContractResolver = new ReadOnlyJsonContractResolver(),
+        Converters = new List<JsonConverter> { new Iso8601TimeSpanConverter() },
+        MaxDepth = 128
+    });
 
     public class ReadOnlyJsonContractResolver : DefaultContractResolver
     {
@@ -67,35 +92,6 @@ namespace Rido.BFLite.Compat.Adapter
             }
 
             return true;
-        }
-    }
-
-    internal static class CompatActivity
-    {
-        public static readonly JsonSerializerSettings BotMessageSerializerSettings = new JsonSerializerSettings
-        {
-            NullValueHandling = NullValueHandling.Ignore,
-            Formatting = Newtonsoft.Json.Formatting.Indented,
-            DateFormatHandling = DateFormatHandling.IsoDateFormat,
-            DateTimeZoneHandling = DateTimeZoneHandling.Utc,
-            ReferenceLoopHandling = ReferenceLoopHandling.Serialize,
-            ContractResolver = new ReadOnlyJsonContractResolver(),
-            Converters = new List<JsonConverter> { new Iso8601TimeSpanConverter() },
-            MaxDepth = 128
-        };
-        public static readonly JsonSerializer BotMessageSerializer = JsonSerializer.Create(BotMessageSerializerSettings);
-        public static Microsoft.Bot.Schema.Activity ToCompatActivity(this Rido.BFLite.Core.Schema.Activity activity)
-        {
-            var json = activity.ToJson();
-            var compatActivity = BotMessageSerializer.Deserialize<Microsoft.Bot.Schema.Activity>(new JsonTextReader(new System.IO.StringReader(json)))!;
-            return compatActivity;
-        }
-        public static Rido.BFLite.Core.Schema.Activity FromCompatActivity(this Microsoft.Bot.Schema.Activity activity)
-        {
-            var sb = new StringBuilder();
-            BotMessageSerializer.Serialize(new JsonTextWriter(new System.IO.StringWriter(sb)), activity);
-            var compatActivity = Rido.BFLite.Core.Schema.Activity.FromJsonString(sb.ToString());
-            return compatActivity;
         }
     }
 }

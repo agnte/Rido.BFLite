@@ -3,25 +3,18 @@ using Microsoft.Bot.Builder;
 using Microsoft.Bot.Builder.Integration.AspNet.Core;
 using Rido.BFLite.Core;
 
-namespace Rido.BFLite.Compat.Adapter
+namespace Rido.BFLite.Compat.Adapter;
+
+public class CompatAdapter(BotApplication botApplication, CompatBotAdapter compatBotAdapter) : IBotFrameworkHttpAdapter
 {
-    public class CompatAdapter(BotApplication botApplication, CompatBotAdapter compatBotAdapter) : IBotFrameworkHttpAdapter
+    public async Task ProcessAsync(HttpRequest httpRequest, HttpResponse httpResponse, IBot bot, CancellationToken cancellationToken = default)
     {
-        public Task ProcessAsync(HttpRequest httpRequest, HttpResponse httpResponse, IBot bot, CancellationToken cancellationToken = default)
+        botApplication.OnOnActivity = async (activity) =>
         {
-            //botApplication.OnMessage = async (activity) =>
-            //{
-            //    var turnContext = new TurnContext(compatBotAdapter, activity.ToCompatActivity());
-            //    await bot.OnTurnAsync(turnContext, cancellationToken);
-            //};
+            var turnContext = new TurnContext(compatBotAdapter, activity.ToCompatActivity());
+            await bot.OnTurnAsync(turnContext, cancellationToken);
+        };
 
-            botApplication.OnActivity += async (sender, args) =>
-            {
-                var turnContext = new TurnContext(compatBotAdapter, args.Activity.ToCompatActivity());
-                await bot.OnTurnAsync(turnContext, cancellationToken);
-            };
-
-            return botApplication.ProcessAsync(httpRequest.HttpContext);
-        }
+        await botApplication.ProcessAsync(httpRequest.HttpContext);
     }
 }

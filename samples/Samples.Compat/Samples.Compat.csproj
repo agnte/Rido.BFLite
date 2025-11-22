@@ -8,7 +8,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Rido.BFLite.Compat.Adapter\Rido.BFLite.Compat.Adapter.csproj" />
-    <ProjectReference Include="..\..\src\Rido.BFLite.Core\Rido.BFLite.Core.csproj" />
   </ItemGroup>
 
 </Project>
