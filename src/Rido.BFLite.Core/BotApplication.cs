@@ -45,7 +45,7 @@ public class BotApplication
     public Func<ConversationUpdateActivityWrapper, Task>? OnConversationUpdate { get; set; }
     
 
-    internal async Task<string> ProcessAsync(HttpContext httpContext)
+    public async Task<string> ProcessAsync(HttpContext httpContext)
     {
         _conversationClient = httpContext.RequestServices.GetKeyedService<ConversationClient>(_serviceKey) ?? throw new Exception("ConversationClient not registered");
         

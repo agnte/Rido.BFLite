@@ -13,10 +13,13 @@
     <Project Path="test/Rido.BFLite.Teams.Tests/Rido.BFLite.Teams.Tests.csproj" />
   </Folder>
   <Project Path="samples/Samples.BotEcho/Samples.EchoBot.csproj" />
+  <Project Path="samples/Samples.Compat/Samples.Compat.csproj" Id="ca1d3c5a-7b7b-4a48-ac52-e71904b381ae" />
   <Project Path="samples/Samples.MultiHosting/Samples.MultiHosting.csproj" Id="ec6f1134-6da6-44d8-b46b-bb9dd8a60789">
     <Build Solution="Debug|*" Project="false" />
   </Project>
   <Project Path="samples/Samples.OAuthBot/Samples.OAuthBot.csproj" Id="48d21d01-db75-4705-8fd7-7e86b6e18b90" />
+  <Project Path="src/Rido.BFLite.Compat.Adapter/Rido.BFLite.Compat.Adapter.csproj" Id="7921bb5b-f78e-4414-9669-8538f6dbda85" />
+  <Project Path="src/Rido.BFLite.Compat/Rido.BFLite.Compat.csproj" Id="3ebdfbed-0571-46f4-ad8c-4f0249d32f5e" />
   <Project Path="src/Rido.BFLite.Core/Rido.BFLite.Core.csproj" />
   <Project Path="src/Rido.BFLite.Teams/Rido.BFLite.Teams.csproj" />
 </Solution>
