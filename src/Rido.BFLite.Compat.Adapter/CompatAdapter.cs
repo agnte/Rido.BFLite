@@ -9,12 +9,7 @@ public class CompatAdapter(BotApplication botApplication, CompatBotAdapter compa
 {
     public async Task ProcessAsync(HttpRequest httpRequest, HttpResponse httpResponse, IBot bot, CancellationToken cancellationToken = default)
     {
-        botApplication.OnOnActivity = async (activity) =>
-        {
-            var turnContext = new TurnContext(compatBotAdapter, activity.ToCompatActivity());
-            await bot.OnTurnAsync(turnContext, cancellationToken);
-        };
-
+        botApplication.OnOnActivity = activity => bot.OnTurnAsync(new TurnContext(compatBotAdapter, activity.ToCompatActivity()), cancellationToken);
         await botApplication.ProcessAsync(httpRequest.HttpContext);
     }
 }
