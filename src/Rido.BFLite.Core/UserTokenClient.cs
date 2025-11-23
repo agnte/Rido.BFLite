@@ -222,10 +222,19 @@ public class UserTokenClient(
     {
         try
         {
+
+            AuthorizationHeaderProviderOptions options = new()
+            {
+                AcquireTokenOptions = new AcquireTokenOptions()
+                {
+                    AuthenticationOptionsName = "AzureAd",
+                }
+            };
+
             // Capture the authorization header provider reference at the start of the method
             // to avoid accessing it after potential scope disposal
             var currentAuthProvider = authorizationHeaderProvider ?? throw new ObjectDisposedException(nameof(IAuthorizationHeaderProvider), "Authorization header provider is not available.");
-            var authHeader = await currentAuthProvider.CreateAuthorizationHeaderForAppAsync(_scopes);
+            var authHeader = await currentAuthProvider.CreateAuthorizationHeaderForAppAsync(_scopes, options);
             var httpClient = httpClientFactory.CreateClient("ApiClient");
             httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", authHeader);
             var fullPath = $"{_apiEndpoint}/{endpoint}";

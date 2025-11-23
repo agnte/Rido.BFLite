@@ -9,7 +9,12 @@ public class CompatAdapter(BotApplication botApplication, CompatBotAdapter compa
 {
     public async Task ProcessAsync(HttpRequest httpRequest, HttpResponse httpResponse, IBot bot, CancellationToken cancellationToken = default)
     {
-        botApplication.OnOnActivity = activity => bot.OnTurnAsync(new TurnContext(compatBotAdapter, activity.ToCompatActivity()), cancellationToken);
+        botApplication.OnOnActivity = activity =>
+        {
+            TurnContext turnContext = new(compatBotAdapter, activity.ToCompatActivity());
+            turnContext.TurnState.Add<Microsoft.Bot.Connector.Authentication.UserTokenClient>(new CompatUserTokenClient(botApplication.UserTokenClient));
+            return bot.OnTurnAsync(turnContext, cancellationToken);
+        };
         await botApplication.ProcessAsync(httpRequest.HttpContext);
     }
 }
