@@ -25,6 +25,12 @@ public class ConversationClient(
             return string.Empty;
         }
 
+        if (activity.Type.Contains("invoke", StringComparison.OrdinalIgnoreCase))
+        {
+            logger.LogTrace("Skipping invoke activity {activityId}", activity.Id);
+            return string.Empty;
+        }
+
         string agentScope = configuration[$"{aadConfigSectionName}:AgentScope"]!;
         activity.From!.Properties.TryGetValue("agenticAppId", out object? agenticAppId);
         activity.From!.Properties.TryGetValue("agenticUserId", out object? agenticUserId);

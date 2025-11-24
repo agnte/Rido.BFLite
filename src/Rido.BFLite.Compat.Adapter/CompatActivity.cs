@@ -6,12 +6,12 @@ namespace Rido.BFLite.Compat.Adapter;
 
 internal static class CompatActivity
 {
-    public static Microsoft.Bot.Schema.Activity ToCompatActivity(this Rido.BFLite.Core.Schema.Activity activity) => 
+    public static Microsoft.Bot.Schema.Activity ToCompatActivity(this Rido.BFLite.Core.Schema.Activity activity) =>
         BotMessageHandlerBase.BotMessageSerializer.Deserialize<Microsoft.Bot.Schema.Activity>(new JsonTextReader(new StringReader(activity.ToJson())))!;
 
     public static Rido.BFLite.Core.Schema.Activity FromCompatActivity(this Microsoft.Bot.Schema.Activity activity)
     {
-        var sb = new StringBuilder();
+        StringBuilder sb = new StringBuilder();
         BotMessageHandlerBase.BotMessageSerializer.Serialize(new JsonTextWriter(new StringWriter(sb)), activity);
         return Rido.BFLite.Core.Schema.Activity.FromJsonString(sb.ToString());
     }

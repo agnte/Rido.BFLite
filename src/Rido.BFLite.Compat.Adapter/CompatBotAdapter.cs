@@ -5,7 +5,6 @@ using Rido.BFLite.Core;
 namespace Rido.BFLite.Compat.Adapter;
 
 public class CompatBotAdapter(BotApplication botApplication) : BotAdapter
-
 {
     public override Task DeleteActivityAsync(ITurnContext turnContext, ConversationReference reference, CancellationToken cancellationToken)
     {
@@ -18,7 +17,7 @@ public class CompatBotAdapter(BotApplication botApplication) : BotAdapter
         ResourceResponse[] responses = new ResourceResponse[1];
         for (int i = 0; i < activities.Length; i++)
         {
-            var a = activities[i].FromCompatActivity();
+            Core.Schema.Activity a = activities[i].FromCompatActivity();
 
             string resp = await botApplication.SendActivityAsync(a);
             responses[i] = new ResourceResponse(id: resp);
@@ -30,4 +29,6 @@ public class CompatBotAdapter(BotApplication botApplication) : BotAdapter
     {
         throw new NotImplementedException();
     }
+
+
 }
