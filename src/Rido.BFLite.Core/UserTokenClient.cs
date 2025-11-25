@@ -76,12 +76,13 @@ public class UserTokenClient(
     ILogger<UserTokenClient> logger,
     IConfiguration configuration,
     IHttpClientFactory httpClientFactory,
-    IAuthorizationHeaderProvider authorizationHeaderProvider) : IUserTokenClient
+    IAgentAuthorizationHeaderProviderService tokenService) : IUserTokenClient
 {
     private readonly ILogger<UserTokenClient> _logger = logger;
     private readonly string _apiEndpoint = "https://token.botframework.com";
     private readonly string _scopes = configuration["AzureAd:AgentScope"]!; // "https://api.botframework.com/.default";
     private readonly JsonSerializerOptions _defaultOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+    private readonly IAgentAuthorizationHeaderProviderService _tokenService = tokenService;
 
     public async Task<IUserTokenClient.GetTokenResult> GetTokenAsync(string userId, string connectionName, string channelId, string? code = null, CancellationToken cancellationToken = default)
     {
@@ -222,10 +223,7 @@ public class UserTokenClient(
     {
         try
         {
-            // Capture the authorization header provider reference at the start of the method
-            // to avoid accessing it after potential scope disposal
-            var currentAuthProvider = authorizationHeaderProvider ?? throw new ObjectDisposedException(nameof(IAuthorizationHeaderProvider), "Authorization header provider is not available.");
-            var authHeader = await currentAuthProvider.CreateAuthorizationHeaderForAppAsync(_scopes, cancellationToken: cancellationToken).ConfigureAwait(false);
+            var authHeader = await _tokenService.GetAuthorizationHeaderForAppAsync(_scopes, cancellationToken: cancellationToken).ConfigureAwait(false);
             var httpClient = httpClientFactory.CreateClient("ApiClient");
             httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", authHeader);
             var fullPath = $"{_apiEndpoint}/{endpoint}";
@@ -256,7 +254,6 @@ public class UserTokenClient(
                 {
                     _logger.LogWarning("User Token not found: {Endpoint}", requestUri);
                     return null!;
-                    //throw new HttpRequestException($"API endpoint not found: {requestUri}", null, response.StatusCode);
                 }
                 else
                 {
@@ -265,11 +262,6 @@ public class UserTokenClient(
                     throw new HttpRequestException($"API call failed with status {response.StatusCode}: {errorContent}");
                 }
             }
-        }
-        catch (ObjectDisposedException ex) when (ex.ObjectName == "IServiceProvider")
-        {
-            _logger.LogError(ex, "Service provider was disposed while calling API endpoint: {Endpoint}. This usually indicates that the HTTP request scope ended before the async operation completed.", endpoint);
-            throw new InvalidOperationException("Authentication service is not available. The request scope may have ended before the operation completed.", ex);
         }
         catch (Exception ex)
         {
@@ -282,25 +274,13 @@ public class UserTokenClient(
     {
         try
         {
-            // Capture the authorization header provider reference at the start of the method
-            // to avoid accessing it after potential scope disposal
-            var currentAuthProvider = authorizationHeaderProvider ?? throw new ObjectDisposedException(nameof(IAuthorizationHeaderProvider), "Authorization header provider is not available.");
-
-            // Get the authorization header using Microsoft.Identity.Web's built-in provider
-            var authHeader = await currentAuthProvider.CreateAuthorizationHeaderForAppAsync(_scopes, cancellationToken: cancellationToken).ConfigureAwait(false);
-
-            // Create HttpClient from factory
+            var authHeader = await _tokenService.GetAuthorizationHeaderForAppAsync(_scopes, cancellationToken: cancellationToken).ConfigureAwait(false);
             var httpClient = httpClientFactory.CreateClient("ApiClient");
-
-            // Add the authorization header
             httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", authHeader);
-
-            // Build the full URI
             var fullPath = $"{_apiEndpoint}/{endpoint}";
 
             _logger.LogInformation("Calling API endpoint with POST: {Endpoint}", fullPath);
 
-            // Serialize the body to JSON
             var jsonContent = JsonSerializer.Serialize(body);
             var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
@@ -319,11 +299,6 @@ public class UserTokenClient(
                     response.StatusCode, errorContent);
                 throw new HttpRequestException($"API call failed with status {response.StatusCode}: {errorContent}");
             }
-        }
-        catch (ObjectDisposedException ex) when (ex.ObjectName == "IServiceProvider")
-        {
-            _logger.LogError(ex, "Service provider was disposed while calling API endpoint: {Endpoint}. This usually indicates that the HTTP request scope ended before the async operation completed.", endpoint);
-            throw new InvalidOperationException("Authentication service is not available. The request scope may have ended before the operation completed.", ex);
         }
         catch (Exception ex)
         {
