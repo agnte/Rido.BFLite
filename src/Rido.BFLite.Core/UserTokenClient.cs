@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Graph;
 using Microsoft.Identity.Abstractions;
 using Rido.BFLite.Core.Schema;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 
@@ -44,46 +46,51 @@ public interface IUserTokenClient
     /// <summary>
     /// Gets the user token for a particular connection.
     /// </summary>
-    Task<GetTokenResult> GetTokenAsync(string userId, string connectionName, string channelId, string? code = null);
+    /// <returns>The token result, or null if the token is not found.</returns>
+    Task<GetTokenResult> GetTokenAsync(string userId, string connectionName, string channelId, string? code = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Get the raw signin link to be sent to the user for signin for a connection.
     /// </summary>
-    Task<GetSignInResourceResult> GetTokenOrSignInResource(string userId, string connectionName, string channelId, string? finalRedirect = null);
+    Task<GetSignInResourceResult> GetTokenOrSignInResource(string userId, string connectionName, string channelId, string? finalRedirect = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets the token status for each connection for the given user.
     /// </summary>
-    Task<GetTokenStatusResult> GetTokenStatusAsync(string userId, string channelId, string? include = null);
+    Task<GetTokenStatusResult> GetTokenStatusAsync(string userId, string channelId, string? include = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Signs the user out of a connection.
     /// </summary>
-    Task<bool> SignOutUserAsync(string userId, string? connectionName = null, string? channelId = null);
+    Task<bool> SignOutUserAsync(string userId, string? connectionName = null, string? channelId = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Exchanges a token for another token.
     /// </summary>
-    Task<string> ExchangeTokenAsync(string userId, string connectionName, string channelId, string exchangeToken);
+    Task<string> ExchangeTokenAsync(string userId, string connectionName, string channelId, string exchangeToken, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets AAD tokens for a user.
     /// </summary>
-    Task<string> GetAadTokensAsync(string userId, string connectionName, string channelId, string[]? resourceUrls = null);
+    Task<string> GetAadTokensAsync(string userId, string connectionName, string channelId, string[]? resourceUrls = null, CancellationToken cancellationToken = default);
+
+    public AgenticIdentity? AgenticIdentity { get; set; }
 }
 
 public class UserTokenClient(
     ILogger<UserTokenClient> logger,
-    IConfiguration configuration,
     IHttpClientFactory httpClientFactory,
-    IAuthorizationHeaderProvider authorizationHeaderProvider) : IUserTokenClient
+    AgentAuthorizationHeaderProviderService tokenService) : IUserTokenClient
 {
     private readonly ILogger<UserTokenClient> _logger = logger;
     private readonly string _apiEndpoint = "https://token.botframework.com";
-    private readonly string _scopes = configuration["AzureAd:AgentScope"]!; // "https://api.botframework.com/.default";
+    private readonly string _scopes = "https://api.botframework.com/.default"; // configuration["AzureAd:AgentScope"]!; // "https://api.botframework.com/.default";
     private readonly JsonSerializerOptions _defaultOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+    private readonly AgentAuthorizationHeaderProviderService _tokenService = tokenService;
 
-    public async Task<IUserTokenClient.GetTokenResult> GetTokenAsync(string userId, string connectionName, string channelId, string? code = null)
+    public AgenticIdentity? AgenticIdentity { get; set; }
+
+    public async Task<IUserTokenClient.GetTokenResult> GetTokenAsync(string userId, string connectionName, string channelId, string? code = null, CancellationToken cancellationToken = default)
     {
         var queryParams = new Dictionary<string, string?>
         {
@@ -97,16 +104,16 @@ public class UserTokenClient(
             queryParams.Add("code", code);
         }
 
-        string? resJson = await CallApiAsync("api/usertoken/GetToken", queryParams);
+        string? resJson = await CallApiAsync("api/usertoken/GetToken", queryParams, cancellationToken: cancellationToken).ConfigureAwait(false);
         if (resJson is not null)
         {
             var result = JsonSerializer.Deserialize<IUserTokenClient.GetTokenResult>(resJson, _defaultOptions)!;
             return result;
         }
-        return null!;
+        return new IUserTokenClient.GetTokenResult();
     }
 
-    public async Task<IUserTokenClient.GetSignInResourceResult> GetTokenOrSignInResource(string userId, string connectionName, string channelId, string? finalRedirect = null)
+    public async Task<IUserTokenClient.GetSignInResourceResult> GetTokenOrSignInResource(string userId, string connectionName, string channelId, string? finalRedirect = null, CancellationToken cancellationToken = default)
     {
         var queryParams = new Dictionary<string, string?>
         {
@@ -132,12 +139,12 @@ public class UserTokenClient(
         //    queryParams.Add("finalRedirect", finalRedirect);
         //}
 
-        var json = await CallApiAsync("api/usertoken/GetTokenOrSignInResource", queryParams);
+        var json = await CallApiAsync("api/usertoken/GetTokenOrSignInResource", queryParams, cancellationToken: cancellationToken).ConfigureAwait(false);
         var result = JsonSerializer.Deserialize<IUserTokenClient.GetSignInResourceResult>(json!, _defaultOptions)!;
         return result;
     }
 
-    public async Task<IUserTokenClient.GetTokenStatusResult> GetTokenStatusAsync(string userId, string channelId, string? include = null)
+    public async Task<IUserTokenClient.GetTokenStatusResult> GetTokenStatusAsync(string userId, string channelId, string? include = null, CancellationToken cancellationToken = default)
     {
         var queryParams = new Dictionary<string, string?>
         {
@@ -150,13 +157,13 @@ public class UserTokenClient(
             queryParams.Add("include", include);
         }
 
-        string? json = await CallApiAsync("api/usertoken/GetTokenStatus", queryParams);
+        string? json = await CallApiAsync("api/usertoken/GetTokenStatus", queryParams, cancellationToken: cancellationToken).ConfigureAwait(false);
         var result = JsonSerializer.Deserialize<IList<IUserTokenClient.GetTokenStatusResult>>(json!, _defaultOptions)!;
         return result[0]!;
 
     }
 
-    public async Task<bool> SignOutUserAsync(string userId, string? connectionName = null, string? channelId = null)
+    public async Task<bool> SignOutUserAsync(string userId, string? connectionName = null, string? channelId = null, CancellationToken cancellationToken = default)
     {
         var queryParams = new Dictionary<string, string?>
         {
@@ -175,7 +182,7 @@ public class UserTokenClient(
 
         try
         {
-            await CallApiAsync("api/usertoken/SignOut", queryParams, HttpMethod.Delete);
+            await CallApiAsync("api/usertoken/SignOut", queryParams, HttpMethod.Delete, cancellationToken: cancellationToken).ConfigureAwait(false);
             return true;
         }
         catch (Exception ex)
@@ -185,7 +192,7 @@ public class UserTokenClient(
         }
     }
 
-    public Task<string> ExchangeTokenAsync(string userId, string connectionName, string channelId, string exchangeToken)
+    public Task<string> ExchangeTokenAsync(string userId, string connectionName, string channelId, string exchangeToken, CancellationToken cancellationToken = default)
     {
         var queryParams = new Dictionary<string, string?>
         {
@@ -202,10 +209,10 @@ public class UserTokenClient(
             }
         };
 
-        return CallApiAsync("api/usertoken/exchange", queryParams, method: HttpMethod.Post, JsonSerializer.Serialize(body))!;
+        return CallApiAsync("api/usertoken/exchange", queryParams, method: HttpMethod.Post, JsonSerializer.Serialize(body), cancellationToken)!;
     }
 
-    public Task<string> GetAadTokensAsync(string userId, string connectionName, string channelId, string[]? resourceUrls = null)
+    public Task<string> GetAadTokensAsync(string userId, string connectionName, string channelId, string[]? resourceUrls = null, CancellationToken cancellationToken = default)
     {
         var body = new
         {
@@ -215,13 +222,22 @@ public class UserTokenClient(
             resourceUrls = resourceUrls ?? []
         };
 
-        return CallApiAsync("api/usertoken/GetAadTokens", body);
+        return CallApiAsync("api/usertoken/GetAadTokens", body, cancellationToken);
     }
 
-    private async Task<string?> CallApiAsync(string endpoint, Dictionary<string, string?> queryParams, HttpMethod? method = null, string? body = "")
+    private async Task<string?> CallApiAsync(string endpoint, Dictionary<string, string?> queryParams, HttpMethod? method = null, string? body = "", CancellationToken cancellationToken = default)
     {
         try
         {
+            string token;
+            if (AgenticIdentity is null)
+            {
+                token = await _tokenService.GetAuthorizationHeaderForAppAsync(_scopes, cancellationToken: cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                token = await _tokenService.GetAuthorizationHeaderAsync(_scopes, AgenticIdentity, cancellationToken: cancellationToken).ConfigureAwait(false);
+            }
 
             AuthorizationHeaderProviderOptions options = new()
             {
@@ -236,7 +252,8 @@ public class UserTokenClient(
             var currentAuthProvider = authorizationHeaderProvider ?? throw new ObjectDisposedException(nameof(IAuthorizationHeaderProvider), "Authorization header provider is not available.");
             var authHeader = await currentAuthProvider.CreateAuthorizationHeaderForAppAsync(_scopes, options);
             var httpClient = httpClientFactory.CreateClient("ApiClient");
-            httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", authHeader);
+            string tokenValue = token.StartsWith("Bearer ") ? token["Bearer ".Length..] : token;
+            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokenValue);
             var fullPath = $"{_apiEndpoint}/{endpoint}";
             var requestUri = QueryHelpers.AddQueryString(fullPath, queryParams);
             _logger.LogInformation("Calling API endpoint: {Endpoint}", requestUri);
@@ -249,23 +266,22 @@ public class UserTokenClient(
                 request.Content = new StringContent(body, Encoding.UTF8, "application/json");
             }
 
-            var response = await httpClient.SendAsync(request);
+            var response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
             if (response.IsSuccessStatusCode)
             {
-                var content = await response.Content.ReadAsStringAsync();
+                var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
                 _logger.LogInformation("API call successful. Status: {StatusCode}", response.StatusCode);
                 return content;
             }
             else
             {
-                var errorContent = await response.Content.ReadAsStringAsync();
+                var errorContent = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 
                 if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
                 {
                     _logger.LogWarning("User Token not found: {Endpoint}", requestUri);
                     return null!;
-                    //throw new HttpRequestException($"API endpoint not found: {requestUri}", null, response.StatusCode);
                 }
                 else
                 {
@@ -275,11 +291,6 @@ public class UserTokenClient(
                 }
             }
         }
-        catch (ObjectDisposedException ex) when (ex.ObjectName == "IServiceProvider")
-        {
-            _logger.LogError(ex, "Service provider was disposed while calling API endpoint: {Endpoint}. This usually indicates that the HTTP request scope ended before the async operation completed.", endpoint);
-            throw new InvalidOperationException("Authentication service is not available. The request scope may have ended before the operation completed.", ex);
-        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error calling API");
@@ -287,52 +298,35 @@ public class UserTokenClient(
         }
     }
 
-    private async Task<string> CallApiAsync(string endpoint, object body)
+    private async Task<string> CallApiAsync(string endpoint, object body, CancellationToken cancellationToken = default)
     {
         try
         {
-            // Capture the authorization header provider reference at the start of the method
-            // to avoid accessing it after potential scope disposal
-            var currentAuthProvider = authorizationHeaderProvider ?? throw new ObjectDisposedException(nameof(IAuthorizationHeaderProvider), "Authorization header provider is not available.");
-
-            // Get the authorization header using Microsoft.Identity.Web's built-in provider
-            var authHeader = await currentAuthProvider.CreateAuthorizationHeaderForAppAsync(_scopes);
-
-            // Create HttpClient from factory
+            var authHeader = await _tokenService.GetAuthorizationHeaderForAppAsync(_scopes, cancellationToken: cancellationToken).ConfigureAwait(false);
             var httpClient = httpClientFactory.CreateClient("ApiClient");
-
-            // Add the authorization header
             httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", authHeader);
-
-            // Build the full URI
             var fullPath = $"{_apiEndpoint}/{endpoint}";
 
             _logger.LogInformation("Calling API endpoint with POST: {Endpoint}", fullPath);
 
-            // Serialize the body to JSON
             var jsonContent = JsonSerializer.Serialize(body);
             var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
-            var response = await httpClient.PostAsync(fullPath, content);
+            var response = await httpClient.PostAsync(fullPath, content, cancellationToken).ConfigureAwait(false);
 
             if (response.IsSuccessStatusCode)
             {
-                var responseContent = await response.Content.ReadAsStringAsync();
+                var responseContent = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
                 _logger.LogInformation("API call successful. Status: {StatusCode}", response.StatusCode);
                 return responseContent;
             }
             else
             {
-                var errorContent = await response.Content.ReadAsStringAsync();
+                var errorContent = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
                 _logger.LogError("API call failed. Status: {StatusCode}, Error: {Error}",
                     response.StatusCode, errorContent);
                 throw new HttpRequestException($"API call failed with status {response.StatusCode}: {errorContent}");
             }
-        }
-        catch (ObjectDisposedException ex) when (ex.ObjectName == "IServiceProvider")
-        {
-            _logger.LogError(ex, "Service provider was disposed while calling API endpoint: {Endpoint}. This usually indicates that the HTTP request scope ended before the async operation completed.", endpoint);
-            throw new InvalidOperationException("Authentication service is not available. The request scope may have ended before the operation completed.", ex);
         }
         catch (Exception ex)
         {

@@ -1,7 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Microsoft.Identity.Abstractions;
-using Microsoft.Identity.Web;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Rido.BFLite.Core.Schema;
 using System.Net.Http.Headers;
@@ -12,8 +10,8 @@ namespace Rido.BFLite.Core;
 public class ConversationClient(
     IConfiguration configuration,
     IHttpClientFactory httpClientFactory,
-    ILogger<ConversationClient> logger, 
-    IAuthorizationHeaderProvider authorizationHeaderProvider,
+    ILogger<ConversationClient> logger,
+    AgentAuthorizationHeaderProviderService tokenService,
     string aadConfigSectionName = "AzureAd")
 {
     public async Task<string> SendActivityAsync(Activity activity, CancellationToken cancellationToken = default)
@@ -32,31 +30,12 @@ public class ConversationClient(
         }
 
         string agentScope = configuration[$"{aadConfigSectionName}:AgentScope"]!;
-        activity.From!.Properties.TryGetValue("agenticAppId", out object? agenticAppId);
-        activity.From!.Properties.TryGetValue("agenticUserId", out object? agenticUserId);
-        activity.From!.Properties.TryGetValue("tenantId", out object? tenantId);
+
+        var agenticIdentity = AgenticIdentity.FromProperties(activity.From?.Properties!); 
+        string token = await tokenService.GetAuthorizationHeaderAsync(agentScope, agenticIdentity, aadConfigSectionName, cancellationToken).ConfigureAwait(false);
+        string tokenValue = token.StartsWith("Bearer ") ? token["Bearer ".Length..] : token;
 
         using HttpClient httpClient = httpClientFactory.CreateClient();
-        AuthorizationHeaderProviderOptions options = new()
-        {
-            AcquireTokenOptions = new AcquireTokenOptions()
-            {
-                AuthenticationOptionsName = aadConfigSectionName,
-            }
-        };
-        
-        string token;
-        if (agentScope != "https://api.botframework.com/.default" && agenticAppId is not null && agenticUserId is not null)
-        {
-            options.WithAgentUserIdentity(agenticAppId.ToString()!, Guid.Parse(agenticUserId.ToString()!));
-            token = await authorizationHeaderProvider.CreateAuthorizationHeaderAsync([agentScope], options, null, cancellationToken);
-        }
-        else
-        {
-            token = await authorizationHeaderProvider.CreateAuthorizationHeaderForAppAsync(agentScope, options, cancellationToken);
-        }
-
-        string tokenValue = token["Bearer ".Length..];
         httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokenValue);
 
         string url = $"{activity.ServiceUrl!}v3/conversations/{activity.Conversation!.Id}/activities/";
@@ -66,7 +45,6 @@ public class ConversationClient(
         {
             var jsonWebToken = new JsonWebToken(tokenValue);
 
-            // File.WriteAllText($"out_act_{activity.Id!}.json", body);
             logger.LogTrace("\n POST {url} \n\n", url);
             logger.LogTrace("Token Claims : \n {claims}", string.Join("\n ", jsonWebToken.Claims.Select(c => $"{c.Type}: {c.Value}")));
             logger.LogTrace("Body: \n {Body} \n", body);
@@ -75,9 +53,9 @@ public class ConversationClient(
         using HttpResponseMessage resp = await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Post, url)
         {
             Content = new StringContent(body, Encoding.UTF8, "application/json")
-        }, cancellationToken);
+        }, cancellationToken).ConfigureAwait(false);
 
-        string respContent = await resp.Content.ReadAsStringAsync(cancellationToken);
+        string respContent = await resp.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         logger.LogTrace("Response Status {status}, content {content}", resp.StatusCode, respContent);
 
         return resp.IsSuccessStatusCode ?
