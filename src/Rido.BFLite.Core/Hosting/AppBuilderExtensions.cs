@@ -16,9 +16,9 @@ public static class AppBuilderExtensions
         builder.UseAuthentication();
         builder.UseAuthorization();
 
-        webApp?.MapPost(routePath, async (HttpContext httpContext) =>
+        webApp?.MapPost(routePath, async (HttpContext httpContext, CancellationToken cancellationToken) =>
         {
-            string resp = await app.ProcessAsync(httpContext);
+            string resp = await app.ProcessAsync(httpContext, cancellationToken);
             return resp;
         }).RequireAuthorization(authorizationPolicy);
 
@@ -37,9 +37,9 @@ public static class AppBuilderExtensions
         builder.UseAuthentication();
         builder.UseAuthorization();
 
-        webApp?.MapPost(routePath, async (HttpContext httpContext) =>
+        webApp?.MapPost(routePath, async (HttpContext httpContext, CancellationToken cancellationToken) =>
         {
-            string resp = await app.ProcessAsync(httpContext);
+            string resp = await app.ProcessAsync(httpContext, cancellationToken);
             return resp;
         }).RequireAuthorization(authorizationPolicy);
 

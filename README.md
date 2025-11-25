@@ -111,9 +111,10 @@ botApp.OnConversationUpdate = conversationUpdate =>
 ### Handle Teams Installation Updates
 
 ```csharp
-botApp.OnInstallationUpdate = installationUpdate =>
+botApp.OnInstallationUpdate = async (installationUpdate, cancellationToken) =>
 {
     Console.WriteLine($"Installation update event. Action: {installationUpdate.Action} for {installationUpdate.SelectedChannelId} channel");
+    await Task.CompletedTask;
 };
 ```
 
