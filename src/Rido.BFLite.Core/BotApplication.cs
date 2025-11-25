@@ -53,7 +53,7 @@ public class BotApplication
         _userTokenClient = httpContext.RequestServices.GetService<UserTokenClient>() ?? throw new Exception("UserTokenClient not registered");
 
         Activity activity = await ParseActivityAsync(httpContext.Request.Body, cancellationToken) ?? throw new InvalidOperationException("Invalid Activity");
-        AgenticIdentity agenticIdentity = AgenticIdentity.FromProperties(activity.Recipient!.Properties!);
+        AgenticIdentity? agenticIdentity = AgenticIdentity.FromProperties(activity.Recipient!.Properties!);
 
         _userTokenClient.AgenticIdentity = agenticIdentity;
 
@@ -133,12 +133,4 @@ public class BotApplication
         }
         return await _conversationClient.SendActivityAsync(activity, cancellationToken);
     }
-
-    //public async Task<string> CheckConfigAsync()
-    //{
-    //    var agenticCredentialsProvider = new AgenticCredentialsProvider(_configuration);
-    //    var token = await agenticCredentialsProvider.CreateAuthorizationHeaderForAppAsync(_configuration["AzureAd:AgentScope"]!);
-    //    _logger.LogTrace("Acquired Token {Token}", token);
-    //    return token;
-    //}
 }

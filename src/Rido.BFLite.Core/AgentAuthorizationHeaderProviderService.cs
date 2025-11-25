@@ -2,7 +2,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Identity.Abstractions;
 using Microsoft.Identity.Web;
-using Rido.BFLite.Core.Schema;
 
 namespace Rido.BFLite.Core;
 
@@ -19,15 +18,22 @@ public class AgentAuthorizationHeaderProviderService(
     private readonly IConfiguration _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
     private readonly ILogger<AgentAuthorizationHeaderProviderService> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Gets an authorization header for Bot Framework API calls.
+    /// Supports both app-only and agentic (user-delegated) token acquisition.
+    /// </summary>
+    /// <param name="scope">The scope for the token request.</param>
+    /// <param name="agenticIdentity">Optional agentic identity for user-delegated token acquisition. If not provided, acquires an app-only token.</param>
+    /// <param name="aadConfigSectionName">The configuration section name for Azure AD settings.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The authorization header value.</returns>
     public async Task<string> GetAuthorizationHeaderAsync(
         string scope,
-        Activity? activity = null,
+        AgenticIdentity? agenticIdentity = null,
         string aadConfigSectionName = "AzureAd",
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(scope);
-
 
         AuthorizationHeaderProviderOptions options = new()
         {
@@ -37,25 +43,33 @@ public class AgentAuthorizationHeaderProviderService(
             }
         };
 
-        string token;
-
-        if (activity != null && TryGetAgenticContext(activity, out var agenticAppId, out var agenticUserId))
+        // Use agentic token if we have a valid identity
+        if (agenticIdentity != null && 
+            !string.IsNullOrEmpty(agenticIdentity.AgentticAppId) && 
+            !string.IsNullOrEmpty(agenticIdentity.AgenticUserId))
         {
-            _logger.LogDebug("Acquiring agentic token for appId: {AgenticAppId}, userId: {AgenticUserId}", agenticAppId, agenticUserId);
+            _logger.LogDebug("Acquiring agentic token for appId: {AgenticAppId}, userId: {AgenticUserId}", 
+                agenticIdentity.AgentticAppId, agenticIdentity.AgenticUserId);
 
-            options.WithAgentUserIdentity(agenticAppId, Guid.Parse(agenticUserId));
-            token = await authorizationHeaderProvider.CreateAuthorizationHeaderAsync([scope], options, null, cancellationToken).ConfigureAwait(false);
-        }
-        else
-        {
-            _logger.LogDebug("Acquiring app-only token for scope: {Scope}", scope);
-            token = await authorizationHeaderProvider.CreateAuthorizationHeaderForAppAsync(scope, options, cancellationToken).ConfigureAwait(false);
+            options.WithAgentUserIdentity(agenticIdentity.AgentticAppId, Guid.Parse(agenticIdentity.AgenticUserId));
+            var token = await authorizationHeaderProvider.CreateAuthorizationHeaderAsync([scope], options, null, cancellationToken).ConfigureAwait(false);
+            return token;
         }
 
-        return token;
+        // Fall back to app-only token
+        _logger.LogDebug("Acquiring app-only token for scope: {Scope}", scope);
+        var appToken = await authorizationHeaderProvider.CreateAuthorizationHeaderForAppAsync(scope, options, cancellationToken).ConfigureAwait(false);
+        return appToken;
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Gets an app-only authorization header for Bot Framework API calls.
+    /// This method always acquires an app-only token (no user delegation).
+    /// </summary>
+    /// <param name="scope">The scope for the token request.</param>
+    /// <param name="aadConfigSectionName">The configuration section name for Azure AD settings.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The authorization header value.</returns>
     public async Task<string> GetAuthorizationHeaderForAppAsync(
         string scope,
         string aadConfigSectionName = "AzureAd",
@@ -79,29 +93,5 @@ public class AgentAuthorizationHeaderProviderService(
         var token = await currentAuthProvider.CreateAuthorizationHeaderForAppAsync(scope, options, cancellationToken).ConfigureAwait(false);
 
         return token;
-    }
-
-    private static bool TryGetAgenticContext(Activity activity, out string agenticAppId, out string agenticUserId)
-    {
-        agenticAppId = string.Empty;
-        agenticUserId = string.Empty;
-
-        if (activity.From?.Properties == null)
-        {
-            return false;
-        }
-
-        var hasAgenticAppId = activity.From.Properties.TryGetValue("agenticAppId", out object? agenticAppIdObj);
-        var hasAgenticUserId = activity.From.Properties.TryGetValue("agenticUserId", out object? agenticUserIdObj);
-
-        if (!hasAgenticAppId || !hasAgenticUserId || agenticAppIdObj == null || agenticUserIdObj == null)
-        {
-            return false;
-        }
-
-        agenticAppId = agenticAppIdObj.ToString()!;
-        agenticUserId = agenticUserIdObj.ToString()!;
-
-        return !string.IsNullOrEmpty(agenticAppId) && !string.IsNullOrEmpty(agenticUserId);
     }
 }
