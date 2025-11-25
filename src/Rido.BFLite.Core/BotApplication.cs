@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Rido.BFLite.Core.Schema;
+using System.Text;
 using System.Text.Json;
 
 namespace Rido.BFLite.Core;
@@ -40,12 +41,12 @@ public class BotApplication
 
     public event EventHandler<ActivityEventArgs>? OnActivity;
 
-    public Func<Activity, Task>? OnMessage { get; set; }
-    public Func<MessageReactionActivityWrapper, Task>? OnMessageReaction { get; set; }
-    public Func<ConversationUpdateActivityWrapper, Task>? OnConversationUpdate { get; set; }
+    public Func<Activity, CancellationToken, Task>? OnMessage { get; set; }
+    public Func<MessageReactionActivityWrapper, CancellationToken, Task>? OnMessageReaction { get; set; }
+    public Func<ConversationUpdateActivityWrapper, CancellationToken, Task>? OnConversationUpdate { get; set; }
     
 
-    internal async Task<string> ProcessAsync(HttpContext httpContext)
+    internal async Task<string> ProcessAsync(HttpContext httpContext, CancellationToken cancellationToken = default)
     {
         _conversationClient = httpContext.RequestServices.GetKeyedService<ConversationClient>(_serviceKey) ?? throw new Exception("ConversationClient not registered");
         
@@ -56,6 +57,7 @@ public class BotApplication
 
         _userTokenClient.AgenticIdentity = agenticIdentity;
 
+        Activity activity = await ParseActivityAsync(httpContext.Request.Body, cancellationToken) ?? throw new InvalidOperationException("Invalid Activity");
         using (_logger.BeginScope("Processing activity {Type} {Id}", activity.Type, activity.Id))
         {
             OnActivity?.Invoke(this, new ActivityEventArgs(activity));
@@ -65,7 +67,7 @@ public class BotApplication
                 case "message":
                     if (OnMessage is not null)
                     {
-                        await OnMessage.Invoke(activity);
+                        await OnMessage.Invoke(activity, cancellationToken);
                         _logger.LogTrace("Message activity handled");
                     }
                     else
@@ -76,7 +78,7 @@ public class BotApplication
                 case "messageReaction":
                     if (OnMessageReaction is not null)
                     {
-                        await OnMessageReaction.Invoke(new MessageReactionActivityWrapper(activity));
+                        await OnMessageReaction.Invoke(new MessageReactionActivityWrapper(activity), cancellationToken);
                         _logger.LogTrace("MessageReaction activity handled");
                     }
                     else
@@ -87,7 +89,7 @@ public class BotApplication
                 case "conversationUpdate":
                     if (OnConversationUpdate is not null)
                     {
-                        await OnConversationUpdate.Invoke(new ConversationUpdateActivityWrapper(activity));
+                        await OnConversationUpdate.Invoke(new ConversationUpdateActivityWrapper(activity), cancellationToken);
                         _logger.LogTrace("ConversationUpdate activity handled");
                     }
                     else
@@ -103,32 +105,33 @@ public class BotApplication
         }
     }
 
-    private async Task<Activity?> ParseActivityAsync(Stream httpContentBody)
+    private async Task<Activity?> ParseActivityAsync(Stream httpContentBody, CancellationToken cancellationToken= default)
     {
         Activity? activity;
         if (_logger.IsEnabled(LogLevel.Trace))
         {
             using StreamReader sr = new(httpContentBody);
-            string body = await sr.ReadToEndAsync();
+            string body = await sr.ReadToEndAsync(cancellationToken);
             _logger.LogTrace("Reading activity from request body \n {Body} \n", body);
-            activity = Activity.FromJsonString(body);
+            using var ms = new MemoryStream(Encoding.UTF8.GetBytes(body));
+            activity = await JsonSerializer.DeserializeAsync<Activity>(ms, Activity.DefaultJsonOptions, cancellationToken);
             //File.WriteAllText($"in_act_{activity.Type}_{activity.Id!.Replace("|", "_")}.json", body);
         }
         else
         {
-            activity = await JsonSerializer.DeserializeAsync<Activity>(httpContentBody, Activity.DefaultJsonOptions);
+            activity = await JsonSerializer.DeserializeAsync<Activity>(httpContentBody, Activity.DefaultJsonOptions, cancellationToken);
         }
 
         return activity;
     }
 
-    public async Task<string> SendActivityAsync(Activity activity)
+    public async Task<string> SendActivityAsync(Activity activity, CancellationToken cancellationToken = default)
     {
         if (_conversationClient is null)
         {
             throw new Exception("ConversationClient not initialized");
         }
-        return await _conversationClient.SendActivityAsync(activity);
+        return await _conversationClient.SendActivityAsync(activity, cancellationToken);
     }
 
     //public async Task<string> CheckConfigAsync()

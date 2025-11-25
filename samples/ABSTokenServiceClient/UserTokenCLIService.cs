@@ -49,11 +49,26 @@ internal class UserTokenCLIService(IUserTokenClient userTokenClient, ILogger<Use
 
                 Console.WriteLine("Code?");
                 string code = Console.ReadLine()!;
+                    IUserTokenClient.GetTokenResult tokenResponse2 = await userTokenClient.GetTokenAsync(userId, connectionName, channelId, code, cancellationToken);
+                    logger.LogInformation("GetToken With Code result: {Result}", tokenResponse2.Token);
+                }
 
                 IUserTokenClient.GetTokenResult tokenResponse2 = await userTokenClient.GetTokenAsync(userId, connectionName, channelId, code);
                 logger.LogInformation("GetToken With Code result: {Result}", tokenResponse2.Token);
             }
 
+                Console.WriteLine("Want to signout? y/n");
+                string yn = Console.ReadLine()!;
+                if ("y".Equals(yn, StringComparison.OrdinalIgnoreCase))
+                {
+                    bool so = await userTokenClient.SignOutUserAsync(userId, connectionName, channelId, cancellationToken);
+                    logger.LogInformation("SignOutUser result: {Result}", so);
+                }
+                else
+                {
+                    IUserTokenClient.GetTokenResult tokenResponse = await userTokenClient.GetTokenAsync(userId, connectionName, channelId, null, cancellationToken);
+                    logger.LogInformation("GetToken result: {Result}", tokenResponse.Token);
+                }
 
             Console.WriteLine("Want to signout? y/n");
             string yn = Console.ReadLine()!;
