@@ -1,8 +1,5 @@
 using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Microsoft.Graph;
-using Microsoft.Identity.Abstractions;
 using Rido.BFLite.Core.Schema;
 using System.Net.Http.Headers;
 using System.Text;
@@ -238,19 +235,6 @@ public class UserTokenClient(
             {
                 token = await _tokenService.GetAuthorizationHeaderAsync(_scopes, AgenticIdentity, cancellationToken: cancellationToken).ConfigureAwait(false);
             }
-
-            AuthorizationHeaderProviderOptions options = new()
-            {
-                AcquireTokenOptions = new AcquireTokenOptions()
-                {
-                    AuthenticationOptionsName = "AzureAd",
-                }
-            };
-
-            // Capture the authorization header provider reference at the start of the method
-            // to avoid accessing it after potential scope disposal
-            var currentAuthProvider = authorizationHeaderProvider ?? throw new ObjectDisposedException(nameof(IAuthorizationHeaderProvider), "Authorization header provider is not available.");
-            var authHeader = await currentAuthProvider.CreateAuthorizationHeaderForAppAsync(_scopes, options);
             var httpClient = httpClientFactory.CreateClient("ApiClient");
             string tokenValue = token.StartsWith("Bearer ") ? token["Bearer ".Length..] : token;
             httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokenValue);

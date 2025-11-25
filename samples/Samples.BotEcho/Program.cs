@@ -16,7 +16,7 @@ Activity? lastActivity = null;
 
 webApp.MapGet("api/notify", async (HttpContext httpContext) =>
 {
-    Activity activity = new Activity()
+    Activity activity = new()
     {
         Type = "message",
         Conversation = new Conversation()
@@ -34,11 +34,11 @@ webApp.MapGet("api/notify", async (HttpContext httpContext) =>
     return Results.Ok("Notification endpoint is working");
 });
 
-botApp.OnMessage = async activity =>
+botApp.OnMessage = async (activity, cancellationToken) =>
 {
     Activity reply = activity.CreateReplyActivity($"you said {activity.Text}, with ❤️ at {DateTime.Now:T}");
     lastActivity = reply;
-    await botApp.SendActivityAsync(reply);
+    await botApp.SendActivityAsync(reply, cancellationToken);
 };
 
 botApp.OnMessageReaction = async (reaction, cancellationToken) =>

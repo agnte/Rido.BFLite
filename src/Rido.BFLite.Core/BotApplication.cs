@@ -43,12 +43,12 @@ public class BotApplication
 
     public Func<Activity, Task>? OnOnActivity { get; set; }
 
-    public Func<Activity, Task>? OnMessage { get; set; }
-    public Func<MessageReactionActivityWrapper, Task>? OnMessageReaction { get; set; }
-    public Func<ConversationUpdateActivityWrapper, Task>? OnConversationUpdate { get; set; }
-    
+    public Func<Activity, CancellationToken, Task>? OnMessage { get; set; }
+    public Func<MessageReactionActivityWrapper, CancellationToken, Task>? OnMessageReaction { get; set; }
+    public Func<ConversationUpdateActivityWrapper, CancellationToken, Task>? OnConversationUpdate { get; set; }
 
-    public async Task<string> ProcessAsync(HttpContext httpContext)
+
+    public async Task<string> ProcessAsync(HttpContext httpContext, CancellationToken cancellationToken = default)
     {
         _conversationClient = httpContext.RequestServices.GetKeyedService<ConversationClient>(_serviceKey) ?? throw new Exception("ConversationClient not registered");
         
