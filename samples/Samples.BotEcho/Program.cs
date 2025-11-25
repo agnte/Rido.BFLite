@@ -26,9 +26,10 @@ botApp.OnMessageReaction = async (reaction, cancellationToken) =>
     await botApp.SendActivityAsync(reply, cancellationToken);
 };
 
-botApp.OnInstallationUpdate = installationUpdate =>
+botApp.OnInstallationUpdate = async (installationUpdate, cancellationToken) =>
 {
     Console.WriteLine($"Installation update event. Action: {installationUpdate.Action} for {installationUpdate.SelectedChannelId} channel");
+    await Task.CompletedTask;
 };
 
 botApp.OnConversationUpdate = async (conversationUpdate, cancellationToken) =>

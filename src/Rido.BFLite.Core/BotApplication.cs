@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Rido.BFLite.Core.Schema;
+using System.Text;
 using System.Text.Json;
 
 namespace Rido.BFLite.Core;
@@ -106,7 +107,8 @@ public class BotApplication
             using StreamReader sr = new(httpContentBody);
             string body = await sr.ReadToEndAsync(cancellationToken);
             _logger.LogTrace("Reading activity from request body \n {Body} \n", body);
-            activity = Activity.FromJsonString(body);
+            using var ms = new MemoryStream(Encoding.UTF8.GetBytes(body));
+            activity = await JsonSerializer.DeserializeAsync<Activity>(ms, Activity.DefaultJsonOptions, cancellationToken);
             //File.WriteAllText($"in_act_{activity.Type}_{activity.Id!.Replace("|", "_")}.json", body);
         }
         else

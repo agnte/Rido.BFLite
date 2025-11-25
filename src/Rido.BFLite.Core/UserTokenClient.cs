@@ -44,7 +44,8 @@ public interface IUserTokenClient
     /// <summary>
     /// Gets the user token for a particular connection.
     /// </summary>
-    Task<GetTokenResult> GetTokenAsync(string userId, string connectionName, string channelId, string? code = null, CancellationToken cancellationToken = default);
+    /// <returns>The token result, or null if the token is not found.</returns>
+    Task<GetTokenResult?> GetTokenAsync(string userId, string connectionName, string channelId, string? code = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Get the raw signin link to be sent to the user for signin for a connection.
@@ -84,7 +85,7 @@ public class UserTokenClient(
     private readonly JsonSerializerOptions _defaultOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
     private readonly AgentAuthorizationHeaderProviderService _tokenService = tokenService;
 
-    public async Task<IUserTokenClient.GetTokenResult> GetTokenAsync(string userId, string connectionName, string channelId, string? code = null, CancellationToken cancellationToken = default)
+    public async Task<IUserTokenClient.GetTokenResult?> GetTokenAsync(string userId, string connectionName, string channelId, string? code = null, CancellationToken cancellationToken = default)
     {
         var queryParams = new Dictionary<string, string?>
         {
@@ -104,7 +105,7 @@ public class UserTokenClient(
             var result = JsonSerializer.Deserialize<IUserTokenClient.GetTokenResult>(resJson, _defaultOptions)!;
             return result;
         }
-        return null!;
+        return null;
     }
 
     public async Task<IUserTokenClient.GetSignInResourceResult> GetTokenOrSignInResource(string userId, string connectionName, string channelId, string? finalRedirect = null, CancellationToken cancellationToken = default)

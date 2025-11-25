@@ -18,7 +18,7 @@ namespace ABSTokenServiceClient
 
         public Task StopAsync(CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            return Task.CompletedTask;
         }
 
         protected async  Task ExecuteAsync(CancellationToken stoppingToken)
