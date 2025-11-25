@@ -19,7 +19,7 @@ public class OAuthBot : BotApplication
                 await base.SendActivityAsync(activity.CreateReplyActivity($"Token status: HasToken={tokenStatus.HasToken}, ConnectionName={tokenStatus.ConnectionName}"), cancellationToken);
                 if (tokenStatus.HasToken!.Value == true)
                 {
-                    IUserTokenClient.GetTokenResult token = await base.UserTokenClient.GetTokenAsync(activity.From!.Id!, tokenStatus.ConnectionName!, activity.ChannelId!, cancellationToken: cancellationToken);
+                    IUserTokenClient.GetTokenResult? token = await base.UserTokenClient.GetTokenAsync(activity.From!.Id!, tokenStatus.ConnectionName!, activity.ChannelId!, cancellationToken: cancellationToken);
                     string res = PrintToken(token);
                     await base.SendActivityAsync(activity.CreateReplyActivity(res), cancellationToken);
                 }
@@ -32,7 +32,7 @@ public class OAuthBot : BotApplication
             else if (activity.Text!.StartsWith("/login"))
             {
                 IUserTokenClient.GetTokenStatusResult tokenStatus = await base.UserTokenClient.GetTokenStatusAsync(activity.From!.Id!, activity.ChannelId!, cancellationToken: cancellationToken);
-                IUserTokenClient.GetTokenResult token = await base.UserTokenClient.GetTokenAsync(activity.From!.Id!, tokenStatus.ConnectionName!, activity.ChannelId!, activity.Text[7..], cancellationToken);
+                IUserTokenClient.GetTokenResult? token = await base.UserTokenClient.GetTokenAsync(activity.From!.Id!, tokenStatus.ConnectionName!, activity.ChannelId!, activity.Text[7..], cancellationToken);
                 string res = PrintToken(token);
                 await base.SendActivityAsync(activity.CreateReplyActivity(res), cancellationToken);
             }
@@ -49,9 +49,9 @@ public class OAuthBot : BotApplication
             }
         };
     }
-    private static string PrintToken(IUserTokenClient.GetTokenResult token)
+    private static string PrintToken(IUserTokenClient.GetTokenResult? token)
     {
-        JsonWebToken jwt = new(token.Token);
+        JsonWebToken jwt = new(token!.Token);
         string res = "Claims: \n";
         jwt.Claims.ToList().ForEach(c => res += $"{c.Type} : **{c.Value}** \r\n");
         return res;

@@ -21,7 +21,7 @@ namespace ABSTokenServiceClient
             return Task.CompletedTask;
         }
 
-        protected async  Task ExecuteAsync(CancellationToken stoppingToken)
+        protected async  Task ExecuteAsync(CancellationToken cancellationToken)
         {
             const string userId = "29:10n4Hk6RsMPuLvAxMNd2zEYU2w1dpvsiLC4QcffJ84rCMp_TKJO_dMzosR4d_K67eAumKyxTzXVYqHQWzRf2ukg";
             const string connectionName = "graph";
@@ -32,37 +32,37 @@ namespace ABSTokenServiceClient
             try
             {
                 logger.LogInformation("=== Testing GetTokenStatus ===");
-                IUserTokenClient.GetTokenStatusResult tokenStatus = await userTokenClient.GetTokenStatusAsync(userId, channelId);
+                IUserTokenClient.GetTokenStatusResult tokenStatus = await userTokenClient.GetTokenStatusAsync(userId, channelId, null, cancellationToken);
                 logger.LogInformation("GetTokenStatus result: {Result}", tokenStatus);
 
                 if (tokenStatus.HasToken == true)
                 {
-                    IUserTokenClient.GetTokenResult tokenResponse = await userTokenClient.GetTokenAsync(userId, connectionName, channelId);
+                    IUserTokenClient.GetTokenResult tokenResponse = await userTokenClient.GetTokenAsync(userId, connectionName, channelId, null, cancellationToken);
                     logger.LogInformation("GetToken result: {Result}", tokenResponse.Token);
                 }
                 else
                 {
-                    IUserTokenClient.GetSignInResourceResult req = await userTokenClient.GetTokenOrSignInResource(userId, connectionName, channelId);
+                    IUserTokenClient.GetSignInResourceResult req = await userTokenClient.GetTokenOrSignInResource(userId, connectionName, channelId, null, cancellationToken);
                     logger.LogInformation("GetSignInResource result: {Result}", req.SignInResource!.SignInLink);
 
                     Console.WriteLine("Code?");
                     string code = Console.ReadLine()!;
 
-                    IUserTokenClient.GetTokenResult tokenResponse2 = await userTokenClient.GetTokenAsync(userId, connectionName, channelId, code);
+                    IUserTokenClient.GetTokenResult tokenResponse2 = await userTokenClient.GetTokenAsync(userId, connectionName, channelId, code, cancellationToken);
                     logger.LogInformation("GetToken With Code result: {Result}", tokenResponse2.Token);
                 }
 
 
                 Console.WriteLine("Want to signout? y/n");
                 string yn = Console.ReadLine()!;
-                if (yn.ToLowerInvariant() == "y")
+                if ("y".Equals(yn, StringComparison.OrdinalIgnoreCase))
                 {
-                    bool so = await userTokenClient.SignOutUserAsync(userId, connectionName, channelId);
+                    bool so = await userTokenClient.SignOutUserAsync(userId, connectionName, channelId, cancellationToken);
                     logger.LogInformation("SignOutUser result: {Result}", so);
                 }
                 else
                 {
-                    IUserTokenClient.GetTokenResult tokenResponse = await userTokenClient.GetTokenAsync(userId, connectionName, channelId);
+                    IUserTokenClient.GetTokenResult tokenResponse = await userTokenClient.GetTokenAsync(userId, connectionName, channelId, null, cancellationToken);
                     logger.LogInformation("GetToken result: {Result}", tokenResponse.Token);
                 }
 

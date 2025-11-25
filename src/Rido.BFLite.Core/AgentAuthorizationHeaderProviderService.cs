@@ -21,38 +21,38 @@ public class AgentAuthorizationHeaderProviderService(
 
     /// <inheritdoc/>
     public async Task<string> GetAuthorizationHeaderAsync(
-        string scope, 
-        Activity? activity = null, 
+        string scope,
+        Activity? activity = null,
         string aadConfigSectionName = "AzureAd",
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(scope);
 
-       
-            AuthorizationHeaderProviderOptions options = new()
-            {
-                AcquireTokenOptions = new AcquireTokenOptions()
-                {
-                    AuthenticationOptionsName = aadConfigSectionName,
-                }
-            };
 
-            string token;
-
-            if (activity != null && TryGetAgenticContext(activity, out var agenticAppId, out var agenticUserId))
+        AuthorizationHeaderProviderOptions options = new()
+        {
+            AcquireTokenOptions = new AcquireTokenOptions()
             {
-                _logger.LogDebug("Acquiring agentic token for appId: {AgenticAppId}, userId: {AgenticUserId}", agenticAppId, agenticUserId);
-                
-                options.WithAgentUserIdentity(agenticAppId, Guid.Parse(agenticUserId));
-                token = await authorizationHeaderProvider.CreateAuthorizationHeaderAsync([scope], options, null, cancellationToken).ConfigureAwait(false);
+                AuthenticationOptionsName = aadConfigSectionName,
             }
-            else
-            {
-                _logger.LogDebug("Acquiring app-only token for scope: {Scope}", scope);
-                token = await authorizationHeaderProvider.CreateAuthorizationHeaderForAppAsync(scope, options, cancellationToken).ConfigureAwait(false);
-            }
+        };
 
-            return token;
+        string token;
+
+        if (activity != null && TryGetAgenticContext(activity, out var agenticAppId, out var agenticUserId))
+        {
+            _logger.LogDebug("Acquiring agentic token for appId: {AgenticAppId}, userId: {AgenticUserId}", agenticAppId, agenticUserId);
+
+            options.WithAgentUserIdentity(agenticAppId, Guid.Parse(agenticUserId));
+            token = await authorizationHeaderProvider.CreateAuthorizationHeaderAsync([scope], options, null, cancellationToken).ConfigureAwait(false);
+        }
+        else
+        {
+            _logger.LogDebug("Acquiring app-only token for scope: {Scope}", scope);
+            token = await authorizationHeaderProvider.CreateAuthorizationHeaderForAppAsync(scope, options, cancellationToken).ConfigureAwait(false);
+        }
+
+        return token;
     }
 
     /// <inheritdoc/>
@@ -63,35 +63,22 @@ public class AgentAuthorizationHeaderProviderService(
     {
         ArgumentException.ThrowIfNullOrEmpty(scope);
 
-        try
-        {
-            var currentAuthProvider = _authorizationHeaderProvider ?? 
-                throw new ObjectDisposedException(nameof(IAuthorizationHeaderProvider), "Authorization header provider is not available.");
+        var currentAuthProvider = _authorizationHeaderProvider ??
+            throw new ObjectDisposedException(nameof(IAuthorizationHeaderProvider), "Authorization header provider is not available.");
 
-            AuthorizationHeaderProviderOptions options = new()
+        AuthorizationHeaderProviderOptions options = new()
+        {
+            AcquireTokenOptions = new AcquireTokenOptions()
             {
-                AcquireTokenOptions = new AcquireTokenOptions()
-                {
-                    AuthenticationOptionsName = aadConfigSectionName,
-                }
-            };
+                AuthenticationOptionsName = aadConfigSectionName,
+            }
+        };
 
-            _logger.LogDebug("Acquiring app-only token for scope: {Scope}", scope);
-            
-            var token = await currentAuthProvider.CreateAuthorizationHeaderForAppAsync(scope, options, cancellationToken).ConfigureAwait(false);
-            
-            return token;
-        }
-        catch (ObjectDisposedException ex) when (ex.ObjectName == "IServiceProvider")
-        {
-            _logger.LogError(ex, "Service provider was disposed while acquiring authorization header. This usually indicates that the HTTP request scope ended before the async operation completed.");
-            throw new InvalidOperationException("Authentication service is not available. The request scope may have ended before the operation completed.", ex);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error acquiring app-only authorization header for scope: {Scope}", scope);
-            throw;
-        }
+        _logger.LogDebug("Acquiring app-only token for scope: {Scope}", scope);
+
+        var token = await currentAuthProvider.CreateAuthorizationHeaderForAppAsync(scope, options, cancellationToken).ConfigureAwait(false);
+
+        return token;
     }
 
     private static bool TryGetAgenticContext(Activity activity, out string agenticAppId, out string agenticUserId)

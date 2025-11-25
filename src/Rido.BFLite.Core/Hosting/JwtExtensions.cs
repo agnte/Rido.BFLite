@@ -103,7 +103,7 @@ public static class JwtExtensions
              };
              jwtOptions.TokenValidationParameters.EnableAadSigningKeyIssuerValidation();
              jwtOptions.MapInboundClaims = true;
-             // jwtOptions.Events = jwtEvents;
+             //jwtOptions.Events = jwtEvents;
              jwtOptions.Validate();
          });
         return builder;
