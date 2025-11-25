@@ -13,7 +13,7 @@ namespace Rido.BFLite.Core;
 public class AgentAuthorizationHeaderProviderService(
     IAuthorizationHeaderProvider authorizationHeaderProvider,
     IConfiguration configuration,
-    ILogger<AgentAuthorizationHeaderProviderService> logger) : IAgentAuthorizationHeaderProviderService
+    ILogger<AgentAuthorizationHeaderProviderService> logger)
 {
     private readonly IAuthorizationHeaderProvider _authorizationHeaderProvider = authorizationHeaderProvider ?? throw new ArgumentNullException(nameof(authorizationHeaderProvider));
     private readonly IConfiguration _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
@@ -28,11 +28,7 @@ public class AgentAuthorizationHeaderProviderService(
     {
         ArgumentException.ThrowIfNullOrEmpty(scope);
 
-        try
-        {
-            var currentAuthProvider = _authorizationHeaderProvider ?? 
-                throw new ObjectDisposedException(nameof(IAuthorizationHeaderProvider), "Authorization header provider is not available.");
-
+       
             AuthorizationHeaderProviderOptions options = new()
             {
                 AcquireTokenOptions = new AcquireTokenOptions()
@@ -48,26 +44,15 @@ public class AgentAuthorizationHeaderProviderService(
                 _logger.LogDebug("Acquiring agentic token for appId: {AgenticAppId}, userId: {AgenticUserId}", agenticAppId, agenticUserId);
                 
                 options.WithAgentUserIdentity(agenticAppId, Guid.Parse(agenticUserId));
-                token = await currentAuthProvider.CreateAuthorizationHeaderAsync([scope], options, null, cancellationToken).ConfigureAwait(false);
+                token = await authorizationHeaderProvider.CreateAuthorizationHeaderAsync([scope], options, null, cancellationToken).ConfigureAwait(false);
             }
             else
             {
                 _logger.LogDebug("Acquiring app-only token for scope: {Scope}", scope);
-                token = await currentAuthProvider.CreateAuthorizationHeaderForAppAsync(scope, options, cancellationToken).ConfigureAwait(false);
+                token = await authorizationHeaderProvider.CreateAuthorizationHeaderForAppAsync(scope, options, cancellationToken).ConfigureAwait(false);
             }
 
             return token;
-        }
-        catch (ObjectDisposedException ex) when (ex.ObjectName == "IServiceProvider")
-        {
-            _logger.LogError(ex, "Service provider was disposed while acquiring authorization header. This usually indicates that the HTTP request scope ended before the async operation completed.");
-            throw new InvalidOperationException("Authentication service is not available. The request scope may have ended before the operation completed.", ex);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error acquiring authorization header for scope: {Scope}", scope);
-            throw;
-        }
     }
 
     /// <inheritdoc/>
@@ -109,7 +94,7 @@ public class AgentAuthorizationHeaderProviderService(
         }
     }
 
-    private bool TryGetAgenticContext(Activity activity, out string agenticAppId, out string agenticUserId)
+    private static bool TryGetAgenticContext(Activity activity, out string agenticAppId, out string agenticUserId)
     {
         agenticAppId = string.Empty;
         agenticUserId = string.Empty;

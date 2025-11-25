@@ -32,13 +32,13 @@ public static class BotApplicationConfigurationExtensions
             
         services.Configure<MicrosoftIdentityApplicationOptions>(aadConfigSectionName, configuration.GetSection(aadConfigSectionName));
 
-        services.AddScoped<IAgentAuthorizationHeaderProviderService, AgentAuthorizationHeaderProviderService>();
+        services.AddScoped<AgentAuthorizationHeaderProviderService>();
 
         static ConversationClient ConversationClientFactory(IServiceProvider provider, object serviceKey) => new(
             provider.GetService<IConfiguration>()!,
             provider.GetService<IHttpClientFactory>()!,
             provider.GetService<ILogger<ConversationClient>>()!,
-            provider.GetService<IAgentAuthorizationHeaderProviderService>()!,
+            provider.GetService<AgentAuthorizationHeaderProviderService>()!,
             serviceKey.ToString()!
             );
 

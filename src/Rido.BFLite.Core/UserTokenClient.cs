@@ -76,13 +76,13 @@ public class UserTokenClient(
     ILogger<UserTokenClient> logger,
     IConfiguration configuration,
     IHttpClientFactory httpClientFactory,
-    IAgentAuthorizationHeaderProviderService tokenService) : IUserTokenClient
+    AgentAuthorizationHeaderProviderService tokenService) : IUserTokenClient
 {
     private readonly ILogger<UserTokenClient> _logger = logger;
     private readonly string _apiEndpoint = "https://token.botframework.com";
     private readonly string _scopes = configuration["AzureAd:AgentScope"]!; // "https://api.botframework.com/.default";
     private readonly JsonSerializerOptions _defaultOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
-    private readonly IAgentAuthorizationHeaderProviderService _tokenService = tokenService;
+    private readonly AgentAuthorizationHeaderProviderService _tokenService = tokenService;
 
     public async Task<IUserTokenClient.GetTokenResult> GetTokenAsync(string userId, string connectionName, string channelId, string? code = null, CancellationToken cancellationToken = default)
     {
