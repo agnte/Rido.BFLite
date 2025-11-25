@@ -2,60 +2,51 @@
 using Microsoft.Extensions.Logging;
 using Rido.BFLite.Core;
 
-namespace ABSTokenServiceClient;
-
-internal class UserTokenCLIService(IUserTokenClient userTokenClient, ILogger<UserTokenCLIService> logger) : IHostedService
+namespace ABSTokenServiceClient
 {
-    public Task StartAsync(CancellationToken cancellationToken)
+    internal class UserTokenCLIService(IUserTokenClient userTokenClient, ILogger<UserTokenCLIService> logger) : IHostedService
     {
-        userTokenClient.AgenticIdentity = new AgenticIdentity()
+        public Task StartAsync(CancellationToken cancellationToken)
         {
-            AgentticAppId = "f30805e3-3457-4c6e-a0e7-bf0fd623f887",
-            AgenticUserId = "715d0396-3a7a-4d44-800d-225d04e4d510",
-            AgenticAppBlueprintId = ""
-        };
-        return ExecuteAsync(cancellationToken);
-    }
+            return ExecuteAsync(cancellationToken);
+        }
 
-    public Task StopAsync(CancellationToken cancellationToken)
-    {
-        throw new NotImplementedException();
-    }
-
-    protected async  Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        //"29:1zEO_D4ExqMVy0N4u4O66aGLq7rKOovkO8X0c3Ww7h50DXLpj2yCsvFA60Ns_fX7LHTQdULeM2xoCkWFeLe1ktQ"
-        const string userId = "8:orgid:a5b857ed-abcf-48e8-9d63-43a2955dbe8d";
-        const string connectionName = "graph";
-        const string channelId = "msteams";
-
-        logger.LogInformation("Application started");
-
-        try
+        public Task StopAsync(CancellationToken cancellationToken)
         {
-            logger.LogInformation("=== Testing GetTokenStatus ===");
-            IUserTokenClient.GetTokenStatusResult tokenStatus = await userTokenClient.GetTokenStatusAsync(userId, channelId);
-            logger.LogInformation("GetTokenStatus result: {Result}", tokenStatus);
+            return Task.CompletedTask;
+        }
 
-            if (tokenStatus.HasToken == true)
-            {
-                IUserTokenClient.GetTokenResult tokenResponse = await userTokenClient.GetTokenAsync(userId, connectionName, channelId);
-                logger.LogInformation("GetToken result: {Result}", tokenResponse.Token);
-            }
-            else
-            {
-                IUserTokenClient.GetSignInResourceResult req = await userTokenClient.GetTokenOrSignInResource(userId, connectionName, channelId);
-                logger.LogInformation("GetSignInResource result: {Result}", req.SignInResource!.SignInLink);
+        protected async Task ExecuteAsync(CancellationToken cancellationToken)
+        {
+            const string userId = "29:10n4Hk6RsMPuLvAxMNd2zEYU2w1dpvsiLC4QcffJ84rCMp_TKJO_dMzosR4d_K67eAumKyxTzXVYqHQWzRf2ukg";
+            const string connectionName = "graph";
+            const string channelId = "msteams";
 
-                Console.WriteLine("Code?");
-                string code = Console.ReadLine()!;
+            logger.LogInformation("Application started");
+
+            try
+            {
+                logger.LogInformation("=== Testing GetTokenStatus ===");
+                IUserTokenClient.GetTokenStatusResult tokenStatus = await userTokenClient.GetTokenStatusAsync(userId, channelId, null, cancellationToken);
+                logger.LogInformation("GetTokenStatus result: {Result}", tokenStatus);
+
+                if (tokenStatus.HasToken == true)
+                {
+                    IUserTokenClient.GetTokenResult tokenResponse = await userTokenClient.GetTokenAsync(userId, connectionName, channelId, null, cancellationToken);
+                    logger.LogInformation("GetToken result: {Result}", tokenResponse.Token);
+                }
+                else
+                {
+                    IUserTokenClient.GetSignInResourceResult req = await userTokenClient.GetTokenOrSignInResource(userId, connectionName, channelId, null, cancellationToken);
+                    logger.LogInformation("GetSignInResource result: {Result}", req.SignInResource!.SignInLink);
+
+                    Console.WriteLine("Code?");
+                    string code = Console.ReadLine()!;
+
                     IUserTokenClient.GetTokenResult tokenResponse2 = await userTokenClient.GetTokenAsync(userId, connectionName, channelId, code, cancellationToken);
                     logger.LogInformation("GetToken With Code result: {Result}", tokenResponse2.Token);
                 }
 
-                IUserTokenClient.GetTokenResult tokenResponse2 = await userTokenClient.GetTokenAsync(userId, connectionName, channelId, code);
-                logger.LogInformation("GetToken With Code result: {Result}", tokenResponse2.Token);
-            }
 
                 Console.WriteLine("Want to signout? y/n");
                 string yn = Console.ReadLine()!;
@@ -70,25 +61,13 @@ internal class UserTokenCLIService(IUserTokenClient userTokenClient, ILogger<Use
                     logger.LogInformation("GetToken result: {Result}", tokenResponse.Token);
                 }
 
-            Console.WriteLine("Want to signout? y/n");
-            string yn = Console.ReadLine()!;
-            if (yn.ToLowerInvariant() == "y")
-            {
-                bool so = await userTokenClient.SignOutUserAsync(userId, connectionName, channelId);
-                logger.LogInformation("SignOutUser result: {Result}", so);
             }
-            else
+            catch (Exception ex)
             {
-                IUserTokenClient.GetTokenResult tokenResponse = await userTokenClient.GetTokenAsync(userId, connectionName, channelId);
-                logger.LogInformation("GetToken result: {Result}", tokenResponse.Token);
+                logger.LogError(ex, "Error during API testing");
             }
 
+            logger.LogInformation("Application completed successfully");
         }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error during API testing");
-        }
-
-        logger.LogInformation("Application completed successfully");
     }
 }

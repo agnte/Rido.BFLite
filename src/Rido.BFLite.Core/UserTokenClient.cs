@@ -1,11 +1,8 @@
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Microsoft.Identity.Abstractions;
-using Microsoft.Identity.Web;
 using Rido.BFLite.Core.Schema;
-using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 
@@ -73,10 +70,9 @@ public interface IUserTokenClient
     /// <summary>
     /// Gets AAD tokens for a user.
     /// </summary>
-    Task<string> GetAadTokensAsync(string userId, string connectionName, string channelId, string[]? resourceUrls = null);
+    Task<string> GetAadTokensAsync(string userId, string connectionName, string channelId, string[]? resourceUrls = null, CancellationToken cancellationToken = default);
 
     public AgenticIdentity? AgenticIdentity { get; set; }
-    Task<string> GetAadTokensAsync(string userId, string connectionName, string channelId, string[]? resourceUrls = null, CancellationToken cancellationToken = default);
 }
 
 public class UserTokenClient(
@@ -87,13 +83,12 @@ public class UserTokenClient(
 {
     private readonly ILogger<UserTokenClient> _logger = logger;
     private readonly string _apiEndpoint = "https://token.botframework.com";
-    private readonly string _scopes = "https://api.botframework.com/.default"; //"8d2d3342-cf29-4959-9577-0e0eafbd16bc/.default"
+    private readonly string _scopes = configuration["AzureAd:AgentScope"]!; // "https://api.botframework.com/.default";
     private readonly JsonSerializerOptions _defaultOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
     private readonly AgentAuthorizationHeaderProviderService _tokenService = tokenService;
 
     public AgenticIdentity? AgenticIdentity { get; set; }
 
-    public async Task<IUserTokenClient.GetTokenResult> GetTokenAsync(string userId, string connectionName, string channelId, string? code = null)
     public async Task<IUserTokenClient.GetTokenResult> GetTokenAsync(string userId, string connectionName, string channelId, string? code = null, CancellationToken cancellationToken = default)
     {
         var queryParams = new Dictionary<string, string?>
@@ -240,71 +235,18 @@ public class UserTokenClient(
             var requestUri = QueryHelpers.AddQueryString(fullPath, queryParams);
             _logger.LogInformation("Calling API endpoint: {Endpoint}", requestUri);
 
-        string configuredScope = configuration["AzureAd:AgentScope"]!;
-        bool useAgenticIdentity = !configuredScope.Equals("https://api.botframework.com/.default", StringComparison.OrdinalIgnoreCase);
+            var httpMethod = method ?? HttpMethod.Get;
+            var request = new HttpRequestMessage(httpMethod, requestUri);
 
-        AuthorizationHeaderProviderOptions options = new();
-        options.AcquireTokenOptions = new AcquireTokenOptions()
-        {
-            AuthenticationOptionsName = "AzureAd",
-        };
-        string tokenValue;
-        if (useAgenticIdentity)
-        {
-            if (AgenticIdentity is null || string.IsNullOrEmpty(AgenticIdentity.AgentticAppId) || string.IsNullOrEmpty(AgenticIdentity.AgenticUserId))
+            if (httpMethod == HttpMethod.Post && !string.IsNullOrEmpty(body))
             {
-                throw new InvalidOperationException("Agentic identity is not set for UserTokenClient.");
+                request.Content = new StringContent(body, Encoding.UTF8, "application/json");
             }
-            options.WithAgentUserIdentity(AgenticIdentity.AgentticAppId, Guid.Parse(AgenticIdentity.AgenticUserId));
-            var token = await authorizationHeaderProvider.CreateAuthorizationHeaderAsync([_scopes], options);
-            tokenValue = token["Bearer ".Length..];
-        }
-        else
-        {
-            var token = await authorizationHeaderProvider.CreateAuthorizationHeaderForAppAsync(_scopes, options);
-            tokenValue = token["Bearer ".Length..];
-        }
-        var httpClient = httpClientFactory.CreateClient("ApiClient");
-        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokenValue);
-        var fullPath = $"{_apiEndpoint}/{endpoint}";
-        var requestUri = QueryHelpers.AddQueryString(fullPath, queryParams);
-        _logger.LogInformation("Calling API endpoint: {Endpoint}", requestUri);
 
-        var httpMethod = method ?? HttpMethod.Get;
-        var request = new HttpRequestMessage(httpMethod, requestUri);
             var response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
-        if (httpMethod == HttpMethod.Post && !string.IsNullOrEmpty(body))
-        {
-            request.Content = new StringContent(body, Encoding.UTF8, "application/json");
-        }
-
-        var response = await httpClient.SendAsync(request);
-
-        if (response.IsSuccessStatusCode)
-        {
-            var content = await response.Content.ReadAsStringAsync();
-            _logger.LogInformation("API call successful. Status: {StatusCode}", response.StatusCode);
-            return content;
-        }
-        else
-        {
-            var errorContent = await response.Content.ReadAsStringAsync();
-
-            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            if (response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("User Token not found: {Endpoint}", requestUri);
-                return null!;
-                //throw new HttpRequestException($"API endpoint not found: {requestUri}", null, response.StatusCode);
-            }
-            else
-            {
-                _logger.LogError("API call failed. Status: {StatusCode}, Error: {Error}",
-                    response.StatusCode, errorContent);
-                throw new HttpRequestException($"API call failed with status {response.StatusCode}: {errorContent}");
-            }
-        }
-
                 var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
                 _logger.LogInformation("API call successful. Status: {StatusCode}", response.StatusCode);
                 return content;

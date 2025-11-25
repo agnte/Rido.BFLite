@@ -52,12 +52,12 @@ public class BotApplication
         
         _userTokenClient = httpContext.RequestServices.GetService<UserTokenClient>() ?? throw new Exception("UserTokenClient not registered");
 
-        Activity activity = await ParseActivityAsync(httpContext.Request.Body) ?? throw new InvalidOperationException("Invalid Activity");
+        Activity activity = await ParseActivityAsync(httpContext.Request.Body, cancellationToken) ?? throw new InvalidOperationException("Invalid Activity");
         AgenticIdentity agenticIdentity = AgenticIdentity.FromProperties(activity.Recipient!.Properties!);
 
         _userTokenClient.AgenticIdentity = agenticIdentity;
 
-        Activity activity = await ParseActivityAsync(httpContext.Request.Body, cancellationToken) ?? throw new InvalidOperationException("Invalid Activity");
+        
         using (_logger.BeginScope("Processing activity {Type} {Id}", activity.Type, activity.Id))
         {
             OnActivity?.Invoke(this, new ActivityEventArgs(activity));
