@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Graph;
 using Microsoft.Identity.Abstractions;
 using Rido.BFLite.Core.Schema;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 
@@ -71,19 +73,22 @@ public interface IUserTokenClient
     /// Gets AAD tokens for a user.
     /// </summary>
     Task<string> GetAadTokensAsync(string userId, string connectionName, string channelId, string[]? resourceUrls = null, CancellationToken cancellationToken = default);
+
+    public AgenticIdentity? AgenticIdentity { get; set; }
 }
 
 public class UserTokenClient(
     ILogger<UserTokenClient> logger,
-    IConfiguration configuration,
     IHttpClientFactory httpClientFactory,
     AgentAuthorizationHeaderProviderService tokenService) : IUserTokenClient
 {
     private readonly ILogger<UserTokenClient> _logger = logger;
     private readonly string _apiEndpoint = "https://token.botframework.com";
-    private readonly string _scopes = configuration["AzureAd:AgentScope"]!; // "https://api.botframework.com/.default";
+    private readonly string _scopes = "https://api.botframework.com/.default"; // configuration["AzureAd:AgentScope"]!; // "https://api.botframework.com/.default";
     private readonly JsonSerializerOptions _defaultOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
     private readonly AgentAuthorizationHeaderProviderService _tokenService = tokenService;
+
+    public AgenticIdentity? AgenticIdentity { get; set; }
 
     public async Task<IUserTokenClient.GetTokenResult> GetTokenAsync(string userId, string connectionName, string channelId, string? code = null, CancellationToken cancellationToken = default)
     {
@@ -224,9 +229,18 @@ public class UserTokenClient(
     {
         try
         {
-            var authHeader = await _tokenService.GetAuthorizationHeaderForAppAsync(_scopes, cancellationToken: cancellationToken).ConfigureAwait(false);
+            string token;
+            if (AgenticIdentity is null)
+            {
+                token = await _tokenService.GetAuthorizationHeaderForAppAsync(_scopes, cancellationToken: cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                token = await _tokenService.GetAuthorizationHeaderAsync(_scopes, AgenticIdentity, cancellationToken: cancellationToken).ConfigureAwait(false);
+            }
             var httpClient = httpClientFactory.CreateClient("ApiClient");
-            httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", authHeader);
+            string tokenValue = token.StartsWith("Bearer ") ? token["Bearer ".Length..] : token;
+            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokenValue);
             var fullPath = $"{_apiEndpoint}/{endpoint}";
             var requestUri = QueryHelpers.AddQueryString(fullPath, queryParams);
             _logger.LogInformation("Calling API endpoint: {Endpoint}", requestUri);

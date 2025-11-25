@@ -1,11 +1,6 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Rido.BFLite.Core;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ABSTokenServiceClient
 {
@@ -21,7 +16,7 @@ namespace ABSTokenServiceClient
             return Task.CompletedTask;
         }
 
-        protected async  Task ExecuteAsync(CancellationToken cancellationToken)
+        protected async Task ExecuteAsync(CancellationToken cancellationToken)
         {
             const string userId = "29:10n4Hk6RsMPuLvAxMNd2zEYU2w1dpvsiLC4QcffJ84rCMp_TKJO_dMzosR4d_K67eAumKyxTzXVYqHQWzRf2ukg";
             const string connectionName = "graph";

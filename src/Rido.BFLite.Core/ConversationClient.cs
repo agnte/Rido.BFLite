@@ -18,11 +18,11 @@ public class ConversationClient(
     {
         string agentScope = configuration[$"{aadConfigSectionName}:AgentScope"]!;
 
-        using HttpClient httpClient = httpClientFactory.CreateClient();
-
-        string token = await tokenService.GetAuthorizationHeaderAsync(agentScope, activity, aadConfigSectionName, cancellationToken).ConfigureAwait(false);
-
+        var agenticIdentity = AgenticIdentity.FromProperties(activity.From?.Properties!); 
+        string token = await tokenService.GetAuthorizationHeaderAsync(agentScope, agenticIdentity, aadConfigSectionName, cancellationToken).ConfigureAwait(false);
         string tokenValue = token.StartsWith("Bearer ") ? token["Bearer ".Length..] : token;
+
+        using HttpClient httpClient = httpClientFactory.CreateClient();
         httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokenValue);
 
         string url = $"{activity.ServiceUrl!}v3/conversations/{activity.Conversation!.Id}/activities/";

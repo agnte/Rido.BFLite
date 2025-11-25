@@ -79,9 +79,9 @@ public static class JwtExtensions
 
     public static AuthenticationBuilder AddCustomJwtBearer(this AuthenticationBuilder builder, string schemeName, string tenantId, string audience)
     {
-        string metadataAddress = tenantId.Equals("botframework.com", StringComparison.OrdinalIgnoreCase)
-            ? "https://login.botframework.com/v1/.well-known/openidconfiguration"
-            : $"https://login.microsoftonline.com/{tenantId}/v2.0/.well-known/openid-configuration";
+        //string metadataAddress = tenantId.Equals("botframework.com", StringComparison.OrdinalIgnoreCase)
+        //    ? "https://login.botframework.com/v1/.well-known/openidconfiguration"
+        //    : $"https://login.microsoftonline.com/{tenantId}/v2.0/.well-known/openid-configuration";
 
         string[] validIssuers = tenantId.Equals("botframework.com", StringComparison.OrdinalIgnoreCase)
             ? ["https://api.botframework.com"]
@@ -91,7 +91,7 @@ public static class JwtExtensions
          {
              jwtOptions.SaveToken = true;
              jwtOptions.IncludeErrorDetails = true;
-             jwtOptions.MetadataAddress = metadataAddress;
+             //jwtOptions.MetadataAddress = metadataAddress;
              jwtOptions.Audience = audience;
              jwtOptions.TokenValidationParameters = new TokenValidationParameters
              {
@@ -103,7 +103,61 @@ public static class JwtExtensions
              };
              jwtOptions.TokenValidationParameters.EnableAadSigningKeyIssuerValidation();
              jwtOptions.MapInboundClaims = true;
-             //jwtOptions.Events = jwtEvents;
+             jwtOptions.Events = new JwtBearerEvents
+             {
+                 OnMessageReceived = async context =>
+                 {
+                     string authorizationHeader = context.Request.Headers.Authorization.ToString();
+
+                     if (string.IsNullOrEmpty(authorizationHeader))
+                     {
+                         // Default to AadTokenValidation handling
+                         context.Options.TokenValidationParameters.ConfigurationManager ??= jwtOptions.ConfigurationManager as BaseConfigurationManager;
+                         await Task.CompletedTask.ConfigureAwait(false);
+                         return;
+                     }
+
+                     string[] parts = authorizationHeader?.Split(' ')!;
+                     if (parts.Length != 2 || parts[0] != "Bearer")
+                     {
+                         // Default to AadTokenValidation handling
+                         context.Options.TokenValidationParameters.ConfigurationManager ??= jwtOptions.ConfigurationManager as BaseConfigurationManager;
+                         await Task.CompletedTask.ConfigureAwait(false);
+                         return;
+                     }
+
+                     JwtSecurityToken token = new(parts[1]);
+                     string issuer = token.Claims.FirstOrDefault(claim => claim.Type == "iss")?.Value!;
+                     string tid = token.Claims.FirstOrDefault(claim => claim.Type == "tid")?.Value!;
+
+                     string oidcAuthority = issuer.Equals("https://api.botframework.com", StringComparison.OrdinalIgnoreCase)
+                         ? "https://login.botframework.com/v1/.well-known/openid-configuration"
+                         : $"https://login.microsoftonline.com/{tid ?? "botframework.com"}/v2.0/.well-known/openid-configuration";
+
+                     jwtOptions.ConfigurationManager = new ConfigurationManager<OpenIdConnectConfiguration>(
+                         oidcAuthority,
+                         new OpenIdConnectConfigurationRetriever(),
+                         new HttpDocumentRetriever
+                         {
+                             RequireHttps = jwtOptions.RequireHttpsMetadata
+                         });
+
+
+                     await Task.CompletedTask.ConfigureAwait(false);
+                 },
+                 OnTokenValidated = context =>
+                 {
+                     return Task.CompletedTask;
+                 },
+                 OnForbidden = context =>
+                 {
+                     return Task.CompletedTask;
+                 },
+                 OnAuthenticationFailed = context =>
+                 {
+                     return Task.CompletedTask;
+                 }
+             };
              jwtOptions.Validate();
          });
         return builder;
@@ -197,36 +251,36 @@ public static class JwtExtensions
     }
 
 
-    readonly static JwtBearerEvents jwtEvents = new()
-    {
-        OnMessageReceived = context =>
-        {
-            string accessToken = context.Request.Headers.Authorization.FirstOrDefault()?.Split(" ").Last()!;
-            return Task.CompletedTask;
-        },
-        OnForbidden = context =>
-        {
-            var f = context.Principal;
-            return Task.CompletedTask;
-        },
-        OnAuthenticationFailed = context =>
-        {
-            var ex = context.Exception;
-            Console.WriteLine(ex.Message);
-            Console.WriteLine(ex.ToString());
-            return System.Threading.Tasks.Task.CompletedTask;
-        },
-        OnTokenValidated = context =>
-        {
-            var v = context.SecurityToken;
-            Console.WriteLine("Token validated");
-            return Task.CompletedTask;
-        },
-        OnChallenge = context =>
-        {
-            Console.WriteLine("token challenged");
-            var error = context.Error;
-            return Task.CompletedTask;
-        }
-    };
+    //readonly static JwtBearerEvents jwtEvents = new()
+    //{
+    //    OnMessageReceived = context =>
+    //    {
+    //        string accessToken = context.Request.Headers.Authorization.FirstOrDefault()?.Split(" ").Last()!;
+    //        return Task.CompletedTask;
+    //    },
+    //    OnForbidden = context =>
+    //    {
+    //        var f = context.Principal;
+    //        return Task.CompletedTask;
+    //    },
+    //    OnAuthenticationFailed = context =>
+    //    {
+    //        var ex = context.Exception;
+    //        Console.WriteLine(ex.Message);
+    //        Console.WriteLine(ex.ToString());
+    //        return System.Threading.Tasks.Task.CompletedTask;
+    //    },
+    //    OnTokenValidated = context =>
+    //    {
+    //        var v = context.SecurityToken;
+    //        Console.WriteLine("Token validated");
+    //        return Task.CompletedTask;
+    //    },
+    //    OnChallenge = context =>
+    //    {
+    //        Console.WriteLine("token challenged");
+    //        var error = context.Error;
+    //        return Task.CompletedTask;
+    //    }
+    //};
 }
