@@ -103,7 +103,7 @@ public static class JwtExtensions
              };
              jwtOptions.TokenValidationParameters.EnableAadSigningKeyIssuerValidation();
              jwtOptions.MapInboundClaims = true;
-             // jwtOptions.Events = jwtEvents;
+             //jwtOptions.Events = jwtEvents;
              jwtOptions.Validate();
          });
         return builder;
@@ -141,7 +141,7 @@ public static class JwtExtensions
             jwtOptions.MapInboundClaims = true;
             jwtOptions.Events = new JwtBearerEvents
             {
-                OnMessageReceived = async context =>
+                OnMessageReceived = context =>
                 {
                     string authorizationHeader = context.Request.Headers.Authorization.ToString();
 
@@ -149,8 +149,7 @@ public static class JwtExtensions
                     {
                         // Default to AadTokenValidation handling
                         context.Options.TokenValidationParameters.ConfigurationManager ??= jwtOptions.ConfigurationManager as BaseConfigurationManager;
-                        await Task.CompletedTask.ConfigureAwait(false);
-                        return;
+                        return Task.CompletedTask;
                     }
 
                     string[] parts = authorizationHeader?.Split(' ')!;
@@ -158,8 +157,7 @@ public static class JwtExtensions
                     {
                         // Default to AadTokenValidation handling
                         context.Options.TokenValidationParameters.ConfigurationManager ??= jwtOptions.ConfigurationManager as BaseConfigurationManager;
-                        await Task.CompletedTask.ConfigureAwait(false);
-                        return;
+                        return Task.CompletedTask;
                     }
 
                     JwtSecurityToken token = new(parts[1]);
@@ -178,8 +176,7 @@ public static class JwtExtensions
                             RequireHttps = jwtOptions.RequireHttpsMetadata
                         });
 
-
-                    await Task.CompletedTask.ConfigureAwait(false);
+                    return Task.CompletedTask;
                 },
                 OnTokenValidated = context =>
                 {

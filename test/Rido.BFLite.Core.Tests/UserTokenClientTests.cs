@@ -57,6 +57,9 @@ public class UserTokenClientTests : IDisposable
         // Add mocked authorization header provider
         services.AddSingleton(_mockAuthProvider.Object);
 
+        // Add AgentAuthorizationHeaderProviderService
+        services.AddScoped<AgentAuthorizationHeaderProviderService>();
+
         // Add UserTokenClient
         services.AddScoped<UserTokenClient>();
 
@@ -121,7 +124,7 @@ public class UserTokenClientTests : IDisposable
     }
 
     [Fact]
-    public async Task GetTokenAsync_WithNotFoundResponse_ReturnsNull()
+    public async Task GetTokenAsync_WithNotFoundResponse_ReturnsEmptyResult()
     {
         // Arrange
         string userId = "test-user";
@@ -133,8 +136,10 @@ public class UserTokenClientTests : IDisposable
         // Act
         IUserTokenClient.GetTokenResult result = await _userTokenClient.GetTokenAsync(userId, connectionName, channelId);
 
-        // Assert
-        Assert.Null(result);
+        // Assert - Returns empty result instead of null for NotFound responses
+        Assert.NotNull(result);
+        Assert.Null(result.Token);
+        Assert.Null(result.ConnectionName);
     }
 
     [Fact]
@@ -298,7 +303,7 @@ public class UserTokenClientTests : IDisposable
     }
 
     [Fact]
-    public async Task CallApiAsync_WithDisposedAuthProvider_ThrowsInvalidOperationException()
+    public async Task CallApiAsync_WithDisposedAuthProvider_ThrowsObjectDisposedException()
     {
         // Arrange
         Mock<IAuthorizationHeaderProvider> mockDisposedAuthProvider = new();
@@ -313,16 +318,17 @@ public class UserTokenClientTests : IDisposable
                 .ConfigurePrimaryHttpMessageHandler(() => _mockHttpMessageHandler.Object)
             .Services
             .AddSingleton(mockDisposedAuthProvider.Object)
+            .AddScoped<AgentAuthorizationHeaderProviderService>()
             .AddScoped<UserTokenClient>()
             .BuildServiceProvider();
 
         UserTokenClient userTokenClient = services.GetRequiredService<UserTokenClient>();
 
         // Act & Assert
-        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+        ObjectDisposedException exception = await Assert.ThrowsAsync<ObjectDisposedException>(
             () => userTokenClient.GetTokenAsync("user", "connection", "channel"));
 
-        Assert.Contains("Authentication service is not available", exception.Message);
+        Assert.Equal("IServiceProvider", exception.ObjectName);
     }
 
     [Fact]
