@@ -56,7 +56,10 @@ public class BotApplication
         using (_logger.BeginScope("Processing activity {Type} {Id}", activity.Type, activity.Id))
         {
 
-            await OnOnActivity?.Invoke(activity)!;
+            if (OnOnActivity is not null)
+            { 
+                await OnOnActivity?.Invoke(activity)!;
+            }
             //OnActivity?.Invoke(this, new ActivityEventArgs(activity));
 
             switch (activity.Type)

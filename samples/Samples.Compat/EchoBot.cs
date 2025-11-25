@@ -1,10 +1,13 @@
 using Microsoft.Bot.Builder;
 using Microsoft.Bot.Schema;
+using System.Collections.Concurrent;
 
-class EchoBot : ActivityHandler
+class EchoBot(ConcurrentDictionary<string, ConversationReference> conversationReferences) : ActivityHandler
 {
     protected override async Task OnMessageActivityAsync(ITurnContext<IMessageActivity> turnContext, CancellationToken cancellationToken)
     {
+        var convRef = turnContext.Activity.GetConversationReference();
+        conversationReferences.AddOrUpdate(convRef.User.Id, convRef, (k, v) => convRef);
         var replyText = $"Echo: {turnContext.Activity.Text}";
         await turnContext.SendActivityAsync(MessageFactory.Text(replyText, replyText), cancellationToken);
 

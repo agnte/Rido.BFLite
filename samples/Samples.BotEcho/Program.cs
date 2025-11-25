@@ -10,9 +10,34 @@ webAppBuilder.Services.AddBotApplication<TeamsBotApplication>();
 WebApplication webApp = webAppBuilder.Build();
 TeamsBotApplication botApp = webApp.UseBotApplication<TeamsBotApplication>();
 
+Activity? lastActivity = null;
+
+
+
+webApp.MapGet("api/notify", async (HttpContext httpContext) =>
+{
+    Activity activity = new Activity()
+    {
+        Type = "message",
+        Conversation = new Conversation()
+        {
+            Id = lastActivity!.Conversation!.Id
+        },
+        From = lastActivity.Recipient,
+        Recipient = lastActivity.From,
+        ServiceUrl = lastActivity.ServiceUrl,
+        Text = "Proactive"
+    };
+
+    await botApp.SendActivityAsync(activity);
+
+    return Results.Ok("Notification endpoint is working");
+});
+
 botApp.OnMessage = async activity =>
 {
     Activity reply = activity.CreateReplyActivity($"you said {activity.Text}, with ❤️ at {DateTime.Now:T}");
+    lastActivity = reply;
     await botApp.SendActivityAsync(reply);
 };
 
