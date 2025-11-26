@@ -11,7 +11,6 @@ WebApplicationBuilder webAppBuilder = WebApplication.CreateBuilder(args);
 
 webAppBuilder.Services.AddBotAuthentication();
 webAppBuilder.Services.AddBotAuthorization();
-webAppBuilder.Services.AddBotApplicationClients();
 webAppBuilder.Services.AddBotApplication<BotApplication>();
 webAppBuilder.Services.AddSingleton<CompatBotAdapter>();
 webAppBuilder.Services.AddSingleton<IBotFrameworkHttpAdapter, CustomAdapter>();

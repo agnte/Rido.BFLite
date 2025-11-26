@@ -62,7 +62,7 @@ public class UserTokenClientTests : IDisposable
         services.AddSingleton(_mockAuthProvider.Object);
 
         // Add AgentAuthorizationHeaderProviderService
-        services.AddScoped<AgentAuthorizationHeaderProviderService>();
+        services.AddScoped<AgenticAuthorizationHeaderProviderService>();
 
         // Add UserTokenClient
         services.AddScoped<UserTokenClient>();
@@ -323,7 +323,7 @@ public class UserTokenClientTests : IDisposable
                 .ConfigurePrimaryHttpMessageHandler(() => _mockHttpMessageHandler.Object)
             .Services
             .AddSingleton(mockDisposedAuthProvider.Object)
-            .AddScoped<AgentAuthorizationHeaderProviderService>()
+            .AddScoped<AgenticAuthorizationHeaderProviderService>()
             .AddScoped<UserTokenClient>()
             .BuildServiceProvider();
 

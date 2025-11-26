@@ -11,7 +11,7 @@ public class ConversationClient(
     IConfiguration configuration,
     IHttpClientFactory httpClientFactory,
     ILogger<ConversationClient> logger,
-    AgentAuthorizationHeaderProviderService tokenService,
+    AgenticAuthorizationHeaderProviderService tokenService,
     string aadConfigSectionName = "AzureAd")
 {
     public async Task<string> SendActivityAsync(Activity activity, CancellationToken cancellationToken = default)

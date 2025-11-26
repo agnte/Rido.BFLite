@@ -4,7 +4,6 @@ using Samples.OAuthBot;
 WebApplicationBuilder webAppBuilder = WebApplication.CreateSlimBuilder(args);
 webAppBuilder.Services.AddBotAuthentication();
 webAppBuilder.Services.AddBotAuthorization();
-webAppBuilder.Services.AddBotApplicationClients();
 webAppBuilder.Services.AddBotApplication<OAuthBot>();
 WebApplication webApp = webAppBuilder.Build();
 webApp.UseBotApplication<OAuthBot>();

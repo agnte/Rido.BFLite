@@ -5,18 +5,44 @@ using Microsoft.Identity.Web;
 
 namespace Rido.BFLite.Core;
 
+
+public class AgenticIdentity
+{
+    public string? AgentticAppId { get; set; }
+    public string? AgenticUserId { get; set; }
+    public string? AgenticAppBlueprintId { get; set; }
+
+    public static AgenticIdentity? FromProperties(IDictionary<string, object>? properties)
+    {
+        if (properties is null)
+        {
+            return null;
+        }
+
+        properties.TryGetValue("agenticAppId", out object? appIdObj);
+        properties.TryGetValue("agenticUserId", out object? userIdObj);
+        properties.TryGetValue("agenticAppBlueprintId", out object? bluePrintObj);
+        return new AgenticIdentity
+        {
+            AgentticAppId = appIdObj?.ToString(),
+            AgenticUserId = userIdObj?.ToString(),
+            AgenticAppBlueprintId = bluePrintObj?.ToString()
+        };
+    }
+}
+
 /// <summary>
 /// Service for acquiring authorization headers for Bot Framework API calls.
 /// Supports both app-only and agentic (user-delegated) token acquisition.
 /// </summary>
-public class AgentAuthorizationHeaderProviderService(
+public class AgenticAuthorizationHeaderProviderService(
     IAuthorizationHeaderProvider authorizationHeaderProvider,
     IConfiguration configuration,
-    ILogger<AgentAuthorizationHeaderProviderService> logger)
+    ILogger<AgenticAuthorizationHeaderProviderService> logger)
 {
     private readonly IAuthorizationHeaderProvider _authorizationHeaderProvider = authorizationHeaderProvider ?? throw new ArgumentNullException(nameof(authorizationHeaderProvider));
     private readonly IConfiguration _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-    private readonly ILogger<AgentAuthorizationHeaderProviderService> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    private readonly ILogger<AgenticAuthorizationHeaderProviderService> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
     /// <summary>
     /// Gets an authorization header for Bot Framework API calls.
