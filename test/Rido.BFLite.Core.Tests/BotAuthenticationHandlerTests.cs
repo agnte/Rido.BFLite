@@ -64,9 +64,6 @@ public class BotAuthenticationHandlerTests : IDisposable
         // Add mocked authorization header provider
         services.AddSingleton(_mockAuthProvider.Object);
 
-        // Add AgenticAuthorizationHeaderProviderService
-        services.AddScoped<AgenticAuthorizationHeaderProviderService>();
-
         _serviceProvider = services.BuildServiceProvider();
     }
 
@@ -74,8 +71,9 @@ public class BotAuthenticationHandlerTests : IDisposable
     public async Task SendAsync_WithoutAgenticIdentity_AcquiresAppOnlyToken()
     {
         // Arrange
-        AgenticAuthorizationHeaderProviderService tokenService = _serviceProvider.GetRequiredService<AgenticAuthorizationHeaderProviderService>();
-        BotAuthenticationHandler handler = new(tokenService, _testScope)
+        IAuthorizationHeaderProvider authProvider = _serviceProvider.GetRequiredService<IAuthorizationHeaderProvider>();
+        ILogger<BotAuthenticationHandler> logger = _serviceProvider.GetRequiredService<ILogger<BotAuthenticationHandler>>();
+        BotAuthenticationHandler handler = new(authProvider, logger, _testScope)
         {
             InnerHandler = _mockInnerHandler.Object
         };
@@ -99,8 +97,9 @@ public class BotAuthenticationHandlerTests : IDisposable
             AgenticUserId = Guid.NewGuid().ToString()
         };
 
-        AgenticAuthorizationHeaderProviderService tokenService = _serviceProvider.GetRequiredService<AgenticAuthorizationHeaderProviderService>();
-        BotAuthenticationHandler handler = new(tokenService, _testScope)
+        IAuthorizationHeaderProvider authProvider = _serviceProvider.GetRequiredService<IAuthorizationHeaderProvider>();
+        ILogger<BotAuthenticationHandler> logger = _serviceProvider.GetRequiredService<ILogger<BotAuthenticationHandler>>();
+        BotAuthenticationHandler handler = new(authProvider, logger, _testScope)
         {
             InnerHandler = _mockInnerHandler.Object
         };
@@ -138,8 +137,9 @@ public class BotAuthenticationHandlerTests : IDisposable
                 Content = new StringContent("{}", Encoding.UTF8, "application/json")
             });
 
-        AgenticAuthorizationHeaderProviderService tokenService = _serviceProvider.GetRequiredService<AgenticAuthorizationHeaderProviderService>();
-        BotAuthenticationHandler handler = new(tokenService, _testScope)
+        IAuthorizationHeaderProvider authProvider = _serviceProvider.GetRequiredService<IAuthorizationHeaderProvider>();
+        ILogger<BotAuthenticationHandler> logger = _serviceProvider.GetRequiredService<ILogger<BotAuthenticationHandler>>();
+        BotAuthenticationHandler handler = new(authProvider, logger, _testScope)
         {
             InnerHandler = _mockInnerHandler.Object
         };
@@ -171,8 +171,9 @@ public class BotAuthenticationHandlerTests : IDisposable
                 Content = new StringContent("{}", Encoding.UTF8, "application/json")
             });
 
-        AgenticAuthorizationHeaderProviderService tokenService = _serviceProvider.GetRequiredService<AgenticAuthorizationHeaderProviderService>();
-        BotAuthenticationHandler handler = new(tokenService, _testScope)
+        IAuthorizationHeaderProvider authProvider = _serviceProvider.GetRequiredService<IAuthorizationHeaderProvider>();
+        ILogger<BotAuthenticationHandler> logger = _serviceProvider.GetRequiredService<ILogger<BotAuthenticationHandler>>();
+        BotAuthenticationHandler handler = new(authProvider, logger, _testScope)
         {
             InnerHandler = _mockInnerHandler.Object
         };
@@ -190,20 +191,24 @@ public class BotAuthenticationHandlerTests : IDisposable
     }
 
     [Fact]
-    public void Constructor_ThrowsOnNullTokenService()
+    public void Constructor_ThrowsOnNullAuthorizationHeaderProvider()
     {
+        // Arrange
+        ILogger<BotAuthenticationHandler> logger = _serviceProvider.GetRequiredService<ILogger<BotAuthenticationHandler>>();
+
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => new BotAuthenticationHandler(null!, _testScope));
+        Assert.Throws<ArgumentNullException>(() => new BotAuthenticationHandler(null!, logger, _testScope));
     }
 
     [Fact]
     public void Constructor_ThrowsOnNullScope()
     {
         // Arrange
-        AgenticAuthorizationHeaderProviderService tokenService = _serviceProvider.GetRequiredService<AgenticAuthorizationHeaderProviderService>();
+        IAuthorizationHeaderProvider authProvider = _serviceProvider.GetRequiredService<IAuthorizationHeaderProvider>();
+        ILogger<BotAuthenticationHandler> logger = _serviceProvider.GetRequiredService<ILogger<BotAuthenticationHandler>>();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => new BotAuthenticationHandler(tokenService, null!));
+        Assert.Throws<ArgumentNullException>(() => new BotAuthenticationHandler(authProvider, logger, null!));
     }
 
     public void Dispose()

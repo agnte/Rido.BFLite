@@ -54,14 +54,12 @@ public class UserTokenClientTests : IDisposable
         // Add mocked authorization header provider
         services.AddSingleton(_mockAuthProvider.Object);
 
-        // Add AgentAuthorizationHeaderProviderService
-        services.AddScoped<AgenticAuthorizationHeaderProviderService>();
-
         // Configure HttpClient with the BotAuthenticationHandler using the mocked primary handler
         services.AddHttpClient("BotFrameworkUserToken")
             .ConfigurePrimaryHttpMessageHandler(() => _mockHttpMessageHandler.Object)
             .AddHttpMessageHandler(sp => new BotAuthenticationHandler(
-                sp.GetRequiredService<AgenticAuthorizationHeaderProviderService>(),
+                sp.GetRequiredService<IAuthorizationHeaderProvider>(),
+                sp.GetRequiredService<ILogger<BotAuthenticationHandler>>(),
                 _testScope));
 
         // Add UserTokenClient with the named HttpClient
@@ -335,11 +333,11 @@ public class UserTokenClientTests : IDisposable
             .AddSingleton<IConfiguration>(_serviceProvider.GetRequiredService<IConfiguration>())
             .AddLogging(builder => builder.AddProvider(NullLoggerProvider.Instance))
             .AddSingleton(mockDisposedAuthProvider.Object)
-            .AddScoped<AgenticAuthorizationHeaderProviderService>()
             .AddHttpClient("BotFrameworkUserToken")
                 .ConfigurePrimaryHttpMessageHandler(() => localMockHandler.Object)
                 .AddHttpMessageHandler(sp => new BotAuthenticationHandler(
-                    sp.GetRequiredService<AgenticAuthorizationHeaderProviderService>(),
+                    sp.GetRequiredService<IAuthorizationHeaderProvider>(),
+                    sp.GetRequiredService<ILogger<BotAuthenticationHandler>>(),
                     _testScope))
             .Services
             .AddScoped(sp => new UserTokenClient(

@@ -73,9 +73,7 @@ public interface IUserTokenClient
     public AgenticIdentity? AgenticIdentity { get; set; }
 }
 
-public class UserTokenClient(
-    ILogger<UserTokenClient> logger,
-    HttpClient httpClient) : IUserTokenClient
+public class UserTokenClient(ILogger<UserTokenClient> logger, HttpClient httpClient) : IUserTokenClient
 {
     private readonly ILogger<UserTokenClient> _logger = logger;
     private readonly string _apiEndpoint = "https://token.botframework.com";
@@ -280,7 +278,6 @@ public class UserTokenClient(
             Content = content
         };
 
-        // Pass the agentic identity to the handler via request options
         request.Options.Set(BotAuthenticationHandler.AgenticIdentityKey, AgenticIdentity);
 
         var response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);

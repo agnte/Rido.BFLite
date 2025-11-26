@@ -4,9 +4,7 @@ using System.Text;
 
 namespace Rido.BFLite.Core;
 
-public class ConversationClient(
-    HttpClient httpClient,
-    ILogger<ConversationClient> logger)
+public class ConversationClient(HttpClient httpClient, ILogger<ConversationClient> logger)
 {
     public async Task<string> SendActivityAsync(Activity activity, CancellationToken cancellationToken = default)
     {
@@ -33,7 +31,6 @@ public class ConversationClient(
             Content = new StringContent(body, Encoding.UTF8, "application/json")
         };
 
-        // Pass the agentic identity to the handler via request options
         request.Options.Set(BotAuthenticationHandler.AgenticIdentityKey, agenticIdentity);
 
         if (logger.IsEnabled(LogLevel.Trace))

@@ -38,19 +38,19 @@ public static class BotApplicationConfigurationExtensions
             
         services.Configure<MicrosoftIdentityApplicationOptions>(aadConfigSectionName, configuration.GetSection(aadConfigSectionName));
 
-        services.AddScoped<AgenticAuthorizationHeaderProviderService>();
-
         string agentScope = configuration[$"{aadConfigSectionName}:AgentScope"] ?? "https://api.botframework.com/.default";
 
         services.AddHttpClient(ConversationHttpClientName)
             .AddHttpMessageHandler(sp => new BotAuthenticationHandler(
-                sp.GetRequiredService<AgenticAuthorizationHeaderProviderService>(),
+                sp.GetRequiredService<IAuthorizationHeaderProvider>(),
+                sp.GetRequiredService<ILogger<BotAuthenticationHandler>>(),
                 agentScope,
                 aadConfigSectionName));
 
         services.AddHttpClient(UserTokenHttpClientName)
             .AddHttpMessageHandler(sp => new BotAuthenticationHandler(
-                sp.GetRequiredService<AgenticAuthorizationHeaderProviderService>(),
+                sp.GetRequiredService<IAuthorizationHeaderProvider>(),
+                sp.GetRequiredService<ILogger<BotAuthenticationHandler>>(),
                 "https://api.botframework.com/.default",
                 aadConfigSectionName));
 
