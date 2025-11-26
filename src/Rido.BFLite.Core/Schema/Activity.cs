@@ -34,7 +34,7 @@ public class Activity<TChannelData>(string type = "message") where TChannelData 
 
     public string ToJson() => JsonSerializer.Serialize(this, DefaultJsonOptions);
 
-    public static Activity<TChannelData> FromJsonString(string json) => JsonSerializer.Deserialize<Activity<TChannelData>>(json)!;
+    public static Activity<TChannelData> FromJsonString(string json) => JsonSerializer.Deserialize<Activity<TChannelData>>(json, DefaultJsonOptions)!;
 
     public Activity CreateReplyActivity(string text = "")
     {

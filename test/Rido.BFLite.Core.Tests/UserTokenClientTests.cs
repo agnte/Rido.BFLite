@@ -54,6 +54,10 @@ public class UserTokenClientTests : IDisposable
         services.AddHttpClient("ApiClient", client => { })
             .ConfigurePrimaryHttpMessageHandler(() => _mockHttpMessageHandler.Object);
 
+        // Add default HttpClient with the same mocked handler for methods that don't use named client
+        services.AddHttpClient(string.Empty, client => { })
+            .ConfigurePrimaryHttpMessageHandler(() => _mockHttpMessageHandler.Object);
+
         // Add mocked authorization header provider
         services.AddSingleton(_mockAuthProvider.Object);
 
@@ -199,13 +203,14 @@ public class UserTokenClientTests : IDisposable
         SetupHttpMessageHandler(HttpStatusCode.OK, responseJson);
 
         // Act
-        IUserTokenClient.GetTokenStatusResult result = await _userTokenClient.GetTokenStatusAsync(userId, channelId, include);
+        IUserTokenClient.GetTokenStatusResult[] result = await _userTokenClient.GetTokenStatusAsync(userId, channelId, include);
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("test-connection", result.ConnectionName);
-        Assert.True(result.HasToken);
-        Assert.Equal("Test Provider", result.ServiceProviderDisplayName);
+        Assert.Single(result);
+        Assert.Equal("test-connection", result[0].ConnectionName);
+        Assert.True(result[0].HasToken);
+        Assert.Equal("Test Provider", result[0].ServiceProviderDisplayName);
 
         VerifyHttpRequest("GET", "https://token.botframework.com/api/usertoken/GetTokenStatus");
     }
@@ -435,11 +440,12 @@ public class UserTokenClientTests : IDisposable
         SetupHttpMessageHandlerWithCapture(HttpStatusCode.OK, responseJson, req => capturedRequest = req);
 
         // Act
-        IUserTokenClient.GetTokenStatusResult result = await _userTokenClient.GetTokenStatusAsync(userId, channelId);
+        IUserTokenClient.GetTokenStatusResult[] result = await _userTokenClient.GetTokenStatusAsync(userId, channelId);
 
         // Assert
         Assert.NotNull(result);
-        Assert.False(result.HasToken);
+        Assert.Single(result);
+        Assert.False(result[0].HasToken);
         Assert.NotNull(capturedRequest);
         Assert.DoesNotContain("include=", capturedRequest.RequestUri!.Query);
     }

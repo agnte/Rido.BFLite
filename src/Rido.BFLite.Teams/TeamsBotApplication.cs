@@ -15,13 +15,13 @@ public class TeamsBotApplication : BotApplication
 
     public TeamsBotApplication(IConfiguration config, ILogger<BotApplication> logger, string serviceKey = "AzureAd") : base(config, logger, serviceKey)
     {
-        OnActivity += async (sender, args) =>
+        OnActivity = async activity =>
         {
-            logger.LogInformation("New activity received of type {type} from {from}", args.Activity.Type, args.Activity.From?.Id);
-            TeamsActivity activity = TeamsActivity.FromActivity(args.Activity);
-            if (activity.Type == "installationUpdate" && OnInstallationUpdate is not null)
+            logger.LogInformation("New activity received of type {type} from {from}", activity.Type, activity.From?.Id);
+            TeamsActivity teamsActivity = TeamsActivity.FromActivity(activity);
+            if (teamsActivity.Type == "installationUpdate" && OnInstallationUpdate is not null)
             {
-                await OnInstallationUpdate.Invoke(new InstallationUpdateWrapper(activity), default);
+                await OnInstallationUpdate.Invoke(new InstallationUpdateWrapper(teamsActivity), default);
             }
         };
     }

@@ -1,8 +1,5 @@
 using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Microsoft.Graph;
-using Microsoft.Identity.Abstractions;
 using Rido.BFLite.Core.Schema;
 using System.Net.Http.Headers;
 using System.Text;
@@ -57,7 +54,7 @@ public interface IUserTokenClient
     /// <summary>
     /// Gets the token status for each connection for the given user.
     /// </summary>
-    Task<GetTokenStatusResult> GetTokenStatusAsync(string userId, string channelId, string? include = null, CancellationToken cancellationToken = default);
+    Task<GetTokenStatusResult[]> GetTokenStatusAsync(string userId, string channelId, string? include = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Signs the user out of a connection.
@@ -144,7 +141,7 @@ public class UserTokenClient(
         return result;
     }
 
-    public async Task<IUserTokenClient.GetTokenStatusResult> GetTokenStatusAsync(string userId, string channelId, string? include = null, CancellationToken cancellationToken = default)
+    public async Task<IUserTokenClient.GetTokenStatusResult[]> GetTokenStatusAsync(string userId, string channelId, string? include = null, CancellationToken cancellationToken = default)
     {
         var queryParams = new Dictionary<string, string?>
         {
@@ -159,7 +156,11 @@ public class UserTokenClient(
 
         string? json = await CallApiAsync("api/usertoken/GetTokenStatus", queryParams, cancellationToken: cancellationToken).ConfigureAwait(false);
         var result = JsonSerializer.Deserialize<IList<IUserTokenClient.GetTokenStatusResult>>(json!, _defaultOptions)!;
-        return result[0]!;
+        if (result == null || result.Count == 0)
+        {
+            return [new IUserTokenClient.GetTokenStatusResult { HasToken = false }];
+        }
+        return [.. result];
 
     }
 
@@ -287,38 +288,41 @@ public class UserTokenClient(
 
     private async Task<string> CallApiAsync(string endpoint, object body, CancellationToken cancellationToken = default)
     {
-        try
+        string token;
+        if (AgenticIdentity is not null)
         {
-            var authHeader = await _tokenService.GetAuthorizationHeaderForAppAsync(_scopes, cancellationToken: cancellationToken).ConfigureAwait(false);
-            var httpClient = httpClientFactory.CreateClient("ApiClient");
-            httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", authHeader);
-            var fullPath = $"{_apiEndpoint}/{endpoint}";
-
-            _logger.LogInformation("Calling API endpoint with POST: {Endpoint}", fullPath);
-
-            var jsonContent = JsonSerializer.Serialize(body);
-            var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
-
-            var response = await httpClient.PostAsync(fullPath, content, cancellationToken).ConfigureAwait(false);
-
-            if (response.IsSuccessStatusCode)
-            {
-                var responseContent = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-                _logger.LogInformation("API call successful. Status: {StatusCode}", response.StatusCode);
-                return responseContent;
-            }
-            else
-            {
-                var errorContent = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-                _logger.LogError("API call failed. Status: {StatusCode}, Error: {Error}",
-                    response.StatusCode, errorContent);
-                throw new HttpRequestException($"API call failed with status {response.StatusCode}: {errorContent}");
-            }
+            token = await _tokenService.GetAuthorizationHeaderAsync(_scopes, AgenticIdentity, cancellationToken: cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception ex)
+        else
         {
-            _logger.LogError(ex, "Error calling API");
-            throw;
+            token = await _tokenService.GetAuthorizationHeaderForAppAsync(_scopes, cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        string tokenValue = token.StartsWith("Bearer ") ? token["Bearer ".Length..] : token;
+        using HttpClient httpClient = httpClientFactory.CreateClient();
+        
+        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokenValue);
+        var fullPath = $"{_apiEndpoint}/{endpoint}";
+
+        _logger.LogInformation("Calling API endpoint with POST: {Endpoint}", fullPath);
+
+        var jsonContent = JsonSerializer.Serialize(body);
+        var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+
+        var response = await httpClient.PostAsync(fullPath, content, cancellationToken).ConfigureAwait(false);
+
+        if (response.IsSuccessStatusCode)
+        {
+            var responseContent = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation("API call successful. Status: {StatusCode}", response.StatusCode);
+            return responseContent;
+        }
+        else
+        {
+            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            _logger.LogError("API call failed. Status: {StatusCode}, Error: {Error}",
+                response.StatusCode, errorContent);
+            throw new HttpRequestException($"API call failed with status {response.StatusCode}: {errorContent}");
         }
     }
 }

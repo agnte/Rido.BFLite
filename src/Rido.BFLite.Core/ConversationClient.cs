@@ -16,6 +16,19 @@ public class ConversationClient(
 {
     public async Task<string> SendActivityAsync(Activity activity, CancellationToken cancellationToken = default)
     {
+
+        if (activity.Type == "trace")
+        {
+            logger.LogTrace("Skipping trace activity {activityId}", activity.Id);
+            return string.Empty;
+        }
+
+        if (activity.Type.Contains("invoke", StringComparison.OrdinalIgnoreCase))
+        {
+            logger.LogTrace("Skipping invoke activity {activityId}", activity.Id);
+            return string.Empty;
+        }
+
         string agentScope = configuration[$"{aadConfigSectionName}:AgentScope"]!;
 
         var agenticIdentity = AgenticIdentity.FromProperties(activity.From?.Properties!); 
