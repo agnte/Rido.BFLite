@@ -74,8 +74,7 @@ public class AgenticAuthorizationHeaderProviderService(
             !string.IsNullOrEmpty(agenticIdentity.AgentticAppId) && 
             !string.IsNullOrEmpty(agenticIdentity.AgenticUserId))
         {
-            _logger.LogDebug("Acquiring agentic token for appId: {AgenticAppId}, userId: {AgenticUserId}", 
-                agenticIdentity.AgentticAppId, agenticIdentity.AgenticUserId);
+            _logger.LogDebug("Acquiring agentic token for appId: {AgenticAppId}, userId: {AgenticUserId}", agenticIdentity.AgentticAppId, agenticIdentity.AgenticUserId);
 
             options.WithAgentUserIdentity(agenticIdentity.AgentticAppId, Guid.Parse(agenticIdentity.AgenticUserId));
             var token = await authorizationHeaderProvider.CreateAuthorizationHeaderAsync([scope], options, null, cancellationToken).ConfigureAwait(false);

@@ -6,7 +6,6 @@ using Microsoft.Identity.Abstractions;
 using Moq;
 using Moq.Protected;
 using System.Net;
-using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text;
 
@@ -65,8 +64,8 @@ public class BotAuthenticationHandlerTests : IDisposable
         // Add mocked authorization header provider
         services.AddSingleton(_mockAuthProvider.Object);
 
-        // Add AgentAuthorizationHeaderProviderService
-        services.AddScoped<AgentAuthorizationHeaderProviderService>();
+        // Add AgenticAuthorizationHeaderProviderService
+        services.AddScoped<AgenticAuthorizationHeaderProviderService>();
 
         _serviceProvider = services.BuildServiceProvider();
     }
@@ -75,15 +74,15 @@ public class BotAuthenticationHandlerTests : IDisposable
     public async Task SendAsync_WithoutAgenticIdentity_AcquiresAppOnlyToken()
     {
         // Arrange
-        var tokenService = _serviceProvider.GetRequiredService<AgentAuthorizationHeaderProviderService>();
-        var handler = new BotAuthenticationHandler(tokenService, _testScope)
+        AgenticAuthorizationHeaderProviderService tokenService = _serviceProvider.GetRequiredService<AgenticAuthorizationHeaderProviderService>();
+        BotAuthenticationHandler handler = new(tokenService, _testScope)
         {
             InnerHandler = _mockInnerHandler.Object
         };
-        var client = new HttpClient(handler);
+        HttpClient client = new(handler);
 
         // Act
-        var response = await client.GetAsync("https://api.example.com/test");
+        HttpResponseMessage response = await client.GetAsync("https://api.example.com/test");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -94,24 +93,24 @@ public class BotAuthenticationHandlerTests : IDisposable
     public async Task SendAsync_WithAgenticIdentity_AcquiresAgenticToken()
     {
         // Arrange
-        var agenticIdentity = new AgenticIdentity
+        AgenticIdentity agenticIdentity = new()
         {
             AgentticAppId = "test-app-id",
             AgenticUserId = Guid.NewGuid().ToString()
         };
 
-        var tokenService = _serviceProvider.GetRequiredService<AgentAuthorizationHeaderProviderService>();
-        var handler = new BotAuthenticationHandler(tokenService, _testScope)
+        AgenticAuthorizationHeaderProviderService tokenService = _serviceProvider.GetRequiredService<AgenticAuthorizationHeaderProviderService>();
+        BotAuthenticationHandler handler = new(tokenService, _testScope)
         {
             InnerHandler = _mockInnerHandler.Object
         };
-        var client = new HttpClient(handler);
+        HttpClient client = new(handler);
 
-        var request = new HttpRequestMessage(HttpMethod.Get, "https://api.example.com/test");
+        HttpRequestMessage request = new(HttpMethod.Get, "https://api.example.com/test");
         request.Options.Set(BotAuthenticationHandler.AgenticIdentityKey, agenticIdentity);
 
         // Act
-        var response = await client.SendAsync(request);
+        HttpResponseMessage response = await client.SendAsync(request);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -139,12 +138,12 @@ public class BotAuthenticationHandlerTests : IDisposable
                 Content = new StringContent("{}", Encoding.UTF8, "application/json")
             });
 
-        var tokenService = _serviceProvider.GetRequiredService<AgentAuthorizationHeaderProviderService>();
-        var handler = new BotAuthenticationHandler(tokenService, _testScope)
+        AgenticAuthorizationHeaderProviderService tokenService = _serviceProvider.GetRequiredService<AgenticAuthorizationHeaderProviderService>();
+        BotAuthenticationHandler handler = new(tokenService, _testScope)
         {
             InnerHandler = _mockInnerHandler.Object
         };
-        var client = new HttpClient(handler);
+        HttpClient client = new(handler);
 
         // Act
         await client.GetAsync("https://api.example.com/test");
@@ -172,12 +171,12 @@ public class BotAuthenticationHandlerTests : IDisposable
                 Content = new StringContent("{}", Encoding.UTF8, "application/json")
             });
 
-        var tokenService = _serviceProvider.GetRequiredService<AgentAuthorizationHeaderProviderService>();
-        var handler = new BotAuthenticationHandler(tokenService, _testScope)
+        AgenticAuthorizationHeaderProviderService tokenService = _serviceProvider.GetRequiredService<AgenticAuthorizationHeaderProviderService>();
+        BotAuthenticationHandler handler = new(tokenService, _testScope)
         {
             InnerHandler = _mockInnerHandler.Object
         };
-        var client = new HttpClient(handler);
+        HttpClient client = new(handler);
 
         // Act
         await client.GetAsync("https://api.example.com/test");
@@ -201,7 +200,7 @@ public class BotAuthenticationHandlerTests : IDisposable
     public void Constructor_ThrowsOnNullScope()
     {
         // Arrange
-        var tokenService = _serviceProvider.GetRequiredService<AgentAuthorizationHeaderProviderService>();
+        AgenticAuthorizationHeaderProviderService tokenService = _serviceProvider.GetRequiredService<AgenticAuthorizationHeaderProviderService>();
 
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() => new BotAuthenticationHandler(tokenService, null!));

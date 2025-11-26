@@ -224,52 +224,45 @@ public class UserTokenClient(
 
     private async Task<string?> CallApiAsync(string endpoint, Dictionary<string, string?> queryParams, HttpMethod? method = null, string? body = "", CancellationToken cancellationToken = default)
     {
-        try
+
+        var fullPath = $"{_apiEndpoint}/{endpoint}";
+        var requestUri = QueryHelpers.AddQueryString(fullPath, queryParams);
+        _logger.LogInformation("Calling API endpoint: {Endpoint}", requestUri);
+
+        var httpMethod = method ?? HttpMethod.Get;
+        var request = new HttpRequestMessage(httpMethod, requestUri);
+
+        // Pass the agentic identity to the handler via request options
+        request.Options.Set(BotAuthenticationHandler.AgenticIdentityKey, AgenticIdentity);
+
+        if (httpMethod == HttpMethod.Post && !string.IsNullOrEmpty(body))
         {
-            var fullPath = $"{_apiEndpoint}/{endpoint}";
-            var requestUri = QueryHelpers.AddQueryString(fullPath, queryParams);
-            _logger.LogInformation("Calling API endpoint: {Endpoint}", requestUri);
+            request.Content = new StringContent(body, Encoding.UTF8, "application/json");
+        }
 
-            var httpMethod = method ?? HttpMethod.Get;
-            var request = new HttpRequestMessage(httpMethod, requestUri);
+        var response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
-            // Pass the agentic identity to the handler via request options
-            request.Options.Set(BotAuthenticationHandler.AgenticIdentityKey, AgenticIdentity);
+        if (response.IsSuccessStatusCode)
+        {
+            var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation("API call successful. Status: {StatusCode}", response.StatusCode);
+            return content;
+        }
+        else
+        {
+            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 
-            if (httpMethod == HttpMethod.Post && !string.IsNullOrEmpty(body))
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
-                request.Content = new StringContent(body, Encoding.UTF8, "application/json");
-            }
-
-            var response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
-
-            if (response.IsSuccessStatusCode)
-            {
-                var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-                _logger.LogInformation("API call successful. Status: {StatusCode}", response.StatusCode);
-                return content;
+                _logger.LogWarning("User Token not found: {Endpoint}", requestUri);
+                return null!;
             }
             else
             {
-                var errorContent = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-
-                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-                {
-                    _logger.LogWarning("User Token not found: {Endpoint}", requestUri);
-                    return null!;
-                }
-                else
-                {
-                    _logger.LogError("API call failed. Status: {StatusCode}, Error: {Error}",
-                        response.StatusCode, errorContent);
-                    throw new HttpRequestException($"API call failed with status {response.StatusCode}: {errorContent}");
-                }
+                _logger.LogError("API call failed. Status: {StatusCode}, Error: {Error}",
+                    response.StatusCode, errorContent);
+                throw new HttpRequestException($"API call failed with status {response.StatusCode}: {errorContent}");
             }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error calling API");
-            throw;
         }
     }
 

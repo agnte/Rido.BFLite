@@ -9,15 +9,9 @@ namespace Rido.BFLite.Core.Hosting;
 
 public static class BotApplicationConfigurationExtensions
 {
-    /// <summary>
-    /// Named HttpClient for Bot Framework conversation operations.
-    /// </summary>
-    public const string ConversationHttpClientName = "BotFrameworkConversation";
+    internal const string ConversationHttpClientName = "BotFrameworkConversation";
 
-    /// <summary>
-    /// Named HttpClient for Bot Framework user token operations.
-    /// </summary>
-    public const string UserTokenHttpClientName = "BotFrameworkUserToken";
+    internal const string UserTokenHttpClientName = "BotFrameworkUserToken";
 
     public static IServiceCollection AddBotApplication<TApp>(this IServiceCollection services) where TApp : BotApplication, new()
     {
@@ -46,22 +40,17 @@ public static class BotApplicationConfigurationExtensions
 
         services.AddScoped<AgenticAuthorizationHeaderProviderService>();
 
-        // Get the agent scope from configuration for conversation client
         string agentScope = configuration[$"{aadConfigSectionName}:AgentScope"] ?? "https://api.botframework.com/.default";
 
-        // Configure HttpClient for ConversationClient with the authentication handler
-        // Uses the agent scope from configuration
         services.AddHttpClient(ConversationHttpClientName)
             .AddHttpMessageHandler(sp => new BotAuthenticationHandler(
-                sp.GetRequiredService<AgentAuthorizationHeaderProviderService>(),
+                sp.GetRequiredService<AgenticAuthorizationHeaderProviderService>(),
                 agentScope,
                 aadConfigSectionName));
 
-        // Configure HttpClient for UserTokenClient with the authentication handler
-        // Uses the fixed bot framework scope for token service API calls
         services.AddHttpClient(UserTokenHttpClientName)
             .AddHttpMessageHandler(sp => new BotAuthenticationHandler(
-                sp.GetRequiredService<AgentAuthorizationHeaderProviderService>(),
+                sp.GetRequiredService<AgenticAuthorizationHeaderProviderService>(),
                 "https://api.botframework.com/.default",
                 aadConfigSectionName));
 
