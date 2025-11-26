@@ -27,10 +27,10 @@ namespace ABSTokenServiceClient
             try
             {
                 logger.LogInformation("=== Testing GetTokenStatus ===");
-                IUserTokenClient.GetTokenStatusResult tokenStatus = await userTokenClient.GetTokenStatusAsync(userId, channelId, null, cancellationToken);
+                IUserTokenClient.GetTokenStatusResult[] tokenStatus = await userTokenClient.GetTokenStatusAsync(userId, channelId, null, cancellationToken);
                 logger.LogInformation("GetTokenStatus result: {Result}", tokenStatus);
 
-                if (tokenStatus.HasToken == true)
+                if (tokenStatus[0].HasToken == true)
                 {
                     IUserTokenClient.GetTokenResult tokenResponse = await userTokenClient.GetTokenAsync(userId, connectionName, channelId, null, cancellationToken);
                     logger.LogInformation("GetToken result: {Result}", tokenResponse.Token);

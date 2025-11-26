@@ -199,13 +199,14 @@ public class UserTokenClientTests : IDisposable
         SetupHttpMessageHandler(HttpStatusCode.OK, responseJson);
 
         // Act
-        IUserTokenClient.GetTokenStatusResult result = await _userTokenClient.GetTokenStatusAsync(userId, channelId, include);
+        IUserTokenClient.GetTokenStatusResult[] result = await _userTokenClient.GetTokenStatusAsync(userId, channelId, include);
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("test-connection", result.ConnectionName);
-        Assert.True(result.HasToken);
-        Assert.Equal("Test Provider", result.ServiceProviderDisplayName);
+        Assert.Single(result);
+        Assert.Equal("test-connection", result[0].ConnectionName);
+        Assert.True(result[0].HasToken);
+        Assert.Equal("Test Provider", result[0].ServiceProviderDisplayName);
 
         VerifyHttpRequest("GET", "https://token.botframework.com/api/usertoken/GetTokenStatus");
     }
@@ -435,11 +436,12 @@ public class UserTokenClientTests : IDisposable
         SetupHttpMessageHandlerWithCapture(HttpStatusCode.OK, responseJson, req => capturedRequest = req);
 
         // Act
-        IUserTokenClient.GetTokenStatusResult result = await _userTokenClient.GetTokenStatusAsync(userId, channelId);
+        IUserTokenClient.GetTokenStatusResult[] result = await _userTokenClient.GetTokenStatusAsync(userId, channelId);
 
         // Assert
         Assert.NotNull(result);
-        Assert.False(result.HasToken);
+        Assert.Single(result);
+        Assert.False(result[0].HasToken);
         Assert.NotNull(capturedRequest);
         Assert.DoesNotContain("include=", capturedRequest.RequestUri!.Query);
     }
