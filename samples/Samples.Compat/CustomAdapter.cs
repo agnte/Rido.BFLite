@@ -14,7 +14,7 @@ public class CustomAdapter : CompatAdapter
 
         base.OnTurnError = async (turnContext, exception) =>
         {
-            logger.LogError(exception, $"[OnTurnError] unhandled error : {exception.Message}");
+            logger.LogError(exception, "[OnTurnError] unhandled error : {Message}", exception.Message);
             await turnContext.SendActivityAsync("The bot encountered an error or bug.");
             await turnContext.SendActivityAsync("To continue to run this bot, please fix the bot source code.");
         };

@@ -20,7 +20,7 @@ public class CompatAdapter(BotApplication botApplication, CompatBotAdapter compa
 
     public async Task ProcessAsync(HttpRequest httpRequest, HttpResponse httpResponse, IBot bot, CancellationToken cancellationToken = default)
     {
-        botApplication.OnOnActivity = activity =>
+        botApplication.OnActivity = activity =>
         {
             TurnContext turnContext = new(compatBotAdapter, activity.ToCompatActivity());
             turnContext.TurnState.Add<Microsoft.Bot.Connector.Authentication.UserTokenClient>(new CompatUserTokenClient(botApplication.UserTokenClient));
@@ -28,6 +28,11 @@ public class CompatAdapter(BotApplication botApplication, CompatBotAdapter compa
         };
         try
         {
+            foreach (var middleware in MiddlewareSet)
+            {
+                botApplication.MiddleWare.Use(new CompatMiddlewareAdapter(middleware));
+            }
+
             await botApplication.ProcessAsync(httpRequest.HttpContext, cancellationToken);
         }
         catch (Exception ex)
@@ -42,7 +47,7 @@ public class CompatAdapter(BotApplication botApplication, CompatBotAdapter compa
 
     public async Task ContinueConversationAsync(string botId, ConversationReference reference, BotCallbackHandler callback, CancellationToken cancellationToken)
     {
-        var turnContext = new TurnContext(compatBotAdapter, reference.GetContinuationActivity());
+        TurnContext turnContext = new(compatBotAdapter, reference.GetContinuationActivity());
         await callback(turnContext, cancellationToken);
     }
 }

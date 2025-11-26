@@ -15,6 +15,7 @@
   </Folder>
   <Project Path="samples/Samples.BotEcho/Samples.EchoBot.csproj" />
   <Project Path="samples/Samples.Compat/Samples.Compat.csproj" Id="ca1d3c5a-7b7b-4a48-ac52-e71904b381ae" />
+  <Project Path="samples/Samples.Middleware/Samples.Middleware.csproj" Id="0cdaa541-71db-4166-908d-9824ed8f8fc1" />
   <Project Path="samples/Samples.MultiHosting/Samples.MultiHosting.csproj" Id="ec6f1134-6da6-44d8-b46b-bb9dd8a60789">
     <Build Solution="Debug|*" Project="false" />
   </Project>

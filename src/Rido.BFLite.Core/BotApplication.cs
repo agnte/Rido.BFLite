@@ -9,12 +9,6 @@ using System.Text.Json;
 
 namespace Rido.BFLite.Core;
 
-
-public class ActivityEventArgs(Activity activity) : EventArgs
-{
-    public Activity Activity { get; set; } = activity;
-}
-
 public class BotApplication
 {
     private readonly ILogger<BotApplication> _logger;
@@ -22,11 +16,15 @@ public class BotApplication
     private ConversationClient? _conversationClient;
     private UserTokenClient? _userTokenClient;
     private readonly string _serviceKey;
+    private readonly TurnMiddleware _turnMiddleware;
+
+
     public BotApplication()
     {
         _logger = NullLogger<BotApplication>.Instance;
         _configuration = new ConfigurationBuilder().Build();
         _serviceKey = "AzureAd";
+        _turnMiddleware = new TurnMiddleware();
     }
 
     public BotApplication(IConfiguration config, ILogger<BotApplication> logger, string serviceKey = "AzureAd")
@@ -34,14 +32,15 @@ public class BotApplication
         _logger = logger;
         _configuration = config;
         _serviceKey = serviceKey;
+        _turnMiddleware = new TurnMiddleware();
         logger.LogInformation("Started bot listener on {port} for AppID:{appid}", config["ASPNETCORE_URLS"], config[$"{_serviceKey}:ClientId"]);
     }
 
+    public TurnMiddleware MiddleWare => _turnMiddleware;
+
     public UserTokenClient UserTokenClient => _userTokenClient ?? throw new Exception("UserTokenClient not initialized");
 
-    public event EventHandler<ActivityEventArgs>? OnActivity;
-
-    public Func<Activity, Task>? OnOnActivity { get; set; }
+    public Func<Activity, Task>? OnActivity { get; set; }
 
     public Func<Activity, CancellationToken, Task>? OnMessage { get; set; }
     public Func<MessageReactionActivityWrapper, CancellationToken, Task>? OnMessageReaction { get; set; }
@@ -63,10 +62,12 @@ public class BotApplication
         using (_logger.BeginScope("Processing activity {Type} {Id}", activity.Type, activity.Id))
         {
 
-            if (OnOnActivity is not null)
-            { 
-                await OnOnActivity?.Invoke(activity)!;
-            }
+            await _turnMiddleware.RunPipeline(this, activity, this.OnActivity, 0, cancellationToken).ConfigureAwait(false);
+
+            //if (OnActivity is not null)
+            //{ 
+            //    await OnActivity?.Invoke(activity)!;
+            //}
             //OnActivity?.Invoke(this, new ActivityEventArgs(activity));
 
             switch (activity.Type)

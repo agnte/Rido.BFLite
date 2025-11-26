@@ -19,7 +19,7 @@ public class CompatBotAdapter(BotApplication botApplication) : BotAdapter
         {
             Core.Schema.Activity a = activities[i].FromCompatActivity();
 
-            string resp = await botApplication.SendActivityAsync(a);
+            string resp = await botApplication.SendActivityAsync(a, cancellationToken);
             responses[i] = new ResourceResponse(id: resp);
         }
         return responses;
