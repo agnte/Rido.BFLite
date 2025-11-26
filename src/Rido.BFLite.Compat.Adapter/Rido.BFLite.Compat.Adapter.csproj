@@ -7,7 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Rido.BFLite.Compat\Rido.BFLite.Compat.csproj" />
+    <PackageReference Include="Microsoft.Bot.Builder" Version="4.23.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Rido.BFLite.Core\Rido.BFLite.Core.csproj" />
   </ItemGroup>
 
