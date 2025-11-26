@@ -47,17 +47,16 @@ public static class BotApplicationConfigurationExtensions
         // Get the agent scope from configuration for conversation client
         string agentScope = configuration[$"{aadConfigSectionName}:AgentScope"] ?? "https://api.botframework.com/.default";
 
-        // Register the BotAuthenticationHandler for conversation client
-        services.AddTransient(sp => new BotAuthenticationHandler(
-            sp.GetRequiredService<AgentAuthorizationHeaderProviderService>(),
-            agentScope,
-            aadConfigSectionName));
-
         // Configure HttpClient for ConversationClient with the authentication handler
+        // Uses the agent scope from configuration
         services.AddHttpClient(ConversationHttpClientName)
-            .AddHttpMessageHandler<BotAuthenticationHandler>();
+            .AddHttpMessageHandler(sp => new BotAuthenticationHandler(
+                sp.GetRequiredService<AgentAuthorizationHeaderProviderService>(),
+                agentScope,
+                aadConfigSectionName));
 
-        // Configure HttpClient for UserTokenClient with the authentication handler using the bot framework scope
+        // Configure HttpClient for UserTokenClient with the authentication handler
+        // Uses the fixed bot framework scope for token service API calls
         services.AddHttpClient(UserTokenHttpClientName)
             .AddHttpMessageHandler(sp => new BotAuthenticationHandler(
                 sp.GetRequiredService<AgentAuthorizationHeaderProviderService>(),

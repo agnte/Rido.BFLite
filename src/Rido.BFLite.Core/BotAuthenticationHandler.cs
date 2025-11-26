@@ -39,6 +39,7 @@ public class BotAuthenticationHandler : DelegatingHandler
         CancellationToken cancellationToken)
     {
         // Try to get agentic identity from request options
+        // If not present, GetAuthorizationHeaderAsync will fall back to app-only token
         AgenticIdentity? agenticIdentity = null;
         request.Options.TryGetValue(AgenticIdentityKey, out agenticIdentity);
 
