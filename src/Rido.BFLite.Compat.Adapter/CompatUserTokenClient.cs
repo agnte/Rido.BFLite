@@ -20,7 +20,7 @@ public class CompatUserTokenClient(Rido.BFLite.Core.UserTokenClient utc) : UserT
     public async override Task<Dictionary<string, TokenResponse>> GetAadTokensAsync(string userId, string connectionName, string[] resourceUrls, string channelId, CancellationToken cancellationToken)
     {
         string res = await utc.GetAadTokensAsync(userId, connectionName, channelId, resourceUrls, cancellationToken);
-        return new Dictionary<string, TokenResponse>(); 
+        return new Dictionary<string, TokenResponse>();
     }
 
     public async override Task<SignInResource> GetSignInResourceAsync(string connectionName, Activity activity, string finalRedirect, CancellationToken cancellationToken)

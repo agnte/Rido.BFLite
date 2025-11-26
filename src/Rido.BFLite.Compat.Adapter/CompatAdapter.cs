@@ -6,7 +6,7 @@ using Rido.BFLite.Core;
 
 namespace Rido.BFLite.Compat.Adapter;
 
-public class CompatAdapter(BotApplication botApplication, CompatBotAdapter compatBotAdapter) :  IBotFrameworkHttpAdapter
+public class CompatAdapter(BotApplication botApplication, CompatBotAdapter compatBotAdapter) : IBotFrameworkHttpAdapter
 {
     public MiddlewareSet MiddlewareSet { get; } = new MiddlewareSet();
 

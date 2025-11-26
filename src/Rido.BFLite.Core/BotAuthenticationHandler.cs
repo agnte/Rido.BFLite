@@ -65,7 +65,7 @@ public class BotAuthenticationHandler(
     {
         request.Options.TryGetValue(AgenticIdentityKey, out AgenticIdentity? agenticIdentity);
 
-        string token = await GetAuthorizationHeaderAsync(agenticIdentity,cancellationToken).ConfigureAwait(false);
+        string token = await GetAuthorizationHeaderAsync(agenticIdentity, cancellationToken).ConfigureAwait(false);
 
         string tokenValue = token.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
             ? token["Bearer ".Length..]

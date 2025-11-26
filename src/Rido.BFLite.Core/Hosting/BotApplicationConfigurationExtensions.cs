@@ -35,7 +35,7 @@ public static class BotApplicationConfigurationExtensions
             .AddTokenAcquisition(false)
             .AddInMemoryTokenCaches()
             .AddAgentIdentities();
-            
+
         services.Configure<MicrosoftIdentityApplicationOptions>(aadConfigSectionName, configuration.GetSection(aadConfigSectionName));
 
         string agentScope = configuration[$"{aadConfigSectionName}:AgentScope"] ?? "https://api.botframework.com/.default";

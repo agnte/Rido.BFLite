@@ -55,7 +55,7 @@ public class BotApplication
     public async Task<Activity> ProcessAsync(HttpContext httpContext, CancellationToken cancellationToken = default)
     {
         _conversationClient = httpContext.RequestServices.GetKeyedService<ConversationClient>(_serviceKey) ?? throw new Exception("ConversationClient not registered");
-        
+
         _userTokenClient = httpContext.RequestServices.GetService<UserTokenClient>() ?? throw new Exception("UserTokenClient not registered");
 
         Activity activity = await ParseActivityAsync(httpContext.Request.Body, cancellationToken) ?? throw new InvalidOperationException("Invalid Activity");
@@ -64,7 +64,7 @@ public class BotApplication
 
         _userTokenClient.AgenticIdentity = agenticIdentity;
 
-        
+
         using (_logger.BeginScope("Processing activity {Type} {Id}", activity.Type, activity.Id))
         {
             try
@@ -131,7 +131,7 @@ public class BotApplication
         }
     }
 
-    public async Task<Activity?> ParseActivityAsync(Stream httpContentBody, CancellationToken cancellationToken= default)
+    public async Task<Activity?> ParseActivityAsync(Stream httpContentBody, CancellationToken cancellationToken = default)
     {
         Activity? activity;
         if (_logger.IsEnabled(LogLevel.Trace))
