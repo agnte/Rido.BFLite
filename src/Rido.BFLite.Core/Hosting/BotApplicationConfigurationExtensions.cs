@@ -21,17 +21,19 @@ public static class BotApplicationConfigurationExtensions
 
     public static IServiceCollection AddBotApplication<TApp>(this IServiceCollection services) where TApp : BotApplication, new()
     {
+        services.AddBotApplicationClients();
         services.AddSingleton<TApp>();
         return services;
     }
 
     public static IServiceCollection AddBotApplication<TApp>(this IServiceCollection services, TApp app) where TApp : BotApplication, new()
     {
+        services.AddBotApplicationClients();
         services.AddSingleton(app);
         return services;
     }
 
-    public static IServiceCollection AddBotApplicationClients(this IServiceCollection services, string aadConfigSectionName = "AzureAd")
+    private static IServiceCollection AddBotApplicationClients(this IServiceCollection services, string aadConfigSectionName = "AzureAd")
     {
         IConfiguration configuration = services.BuildServiceProvider().GetRequiredService<IConfiguration>();
         services
@@ -42,7 +44,7 @@ public static class BotApplicationConfigurationExtensions
             
         services.Configure<MicrosoftIdentityApplicationOptions>(aadConfigSectionName, configuration.GetSection(aadConfigSectionName));
 
-        services.AddScoped<AgentAuthorizationHeaderProviderService>();
+        services.AddScoped<AgenticAuthorizationHeaderProviderService>();
 
         // Get the agent scope from configuration for conversation client
         string agentScope = configuration[$"{aadConfigSectionName}:AgentScope"] ?? "https://api.botframework.com/.default";

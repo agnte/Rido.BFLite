@@ -55,7 +55,7 @@ public class UserTokenClientTests : IDisposable
         services.AddSingleton(_mockAuthProvider.Object);
 
         // Add AgentAuthorizationHeaderProviderService
-        services.AddScoped<AgentAuthorizationHeaderProviderService>();
+        services.AddScoped<AgenticAuthorizationHeaderProviderService>();
 
         // Configure HttpClient with the BotAuthenticationHandler using the mocked primary handler
         services.AddHttpClient(BotApplicationConfigurationExtensions.UserTokenHttpClientName)
@@ -329,9 +329,9 @@ public class UserTokenClientTests : IDisposable
                     sp.GetRequiredService<AgentAuthorizationHeaderProviderService>(),
                     _testScope))
             .Services
-            .AddScoped(sp => new UserTokenClient(
-                sp.GetRequiredService<ILogger<UserTokenClient>>(),
-                sp.GetRequiredService<IHttpClientFactory>().CreateClient(BotApplicationConfigurationExtensions.UserTokenHttpClientName)))
+            .AddSingleton(mockDisposedAuthProvider.Object)
+            .AddScoped<AgenticAuthorizationHeaderProviderService>()
+            .AddScoped<UserTokenClient>()
             .BuildServiceProvider();
 
         UserTokenClient userTokenClient = services.GetRequiredService<UserTokenClient>();

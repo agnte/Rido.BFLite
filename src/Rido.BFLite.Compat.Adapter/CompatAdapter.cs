@@ -40,7 +40,7 @@ public class CompatAdapter(BotApplication botApplication, CompatBotAdapter compa
         {
             if (OnTurnError != null)
             {
-                if (ex is ActivityException aex)
+                if (ex is BotHanlderException aex)
                 {
                     activity = aex.Activity;
                     TurnContext turnContext = new(compatBotAdapter, activity!.ToCompatActivity());
