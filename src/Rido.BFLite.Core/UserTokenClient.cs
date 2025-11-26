@@ -77,13 +77,13 @@ public interface IUserTokenClient
 public class UserTokenClient(
     ILogger<UserTokenClient> logger,
     IHttpClientFactory httpClientFactory,
-    AgentAuthorizationHeaderProviderService tokenService) : IUserTokenClient
+    AgenticAuthorizationHeaderProviderService tokenService) : IUserTokenClient
 {
     private readonly ILogger<UserTokenClient> _logger = logger;
     private readonly string _apiEndpoint = "https://token.botframework.com";
     private readonly string _scopes = "https://api.botframework.com/.default"; // configuration["AzureAd:AgentScope"]!; // "https://api.botframework.com/.default";
     private readonly JsonSerializerOptions _defaultOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
-    private readonly AgentAuthorizationHeaderProviderService _tokenService = tokenService;
+    private readonly AgenticAuthorizationHeaderProviderService _tokenService = tokenService;
 
     public AgenticIdentity? AgenticIdentity { get; set; }
 

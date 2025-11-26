@@ -9,6 +9,11 @@ using System.Text.Json;
 
 namespace Rido.BFLite.Core;
 
+public class BotHanlderException(string message, Exception ex, Activity activity) : Exception(message, ex)
+{
+    public Activity Activity { get; } = activity;
+}
+
 public class BotApplication
 {
     private readonly ILogger<BotApplication> _logger;
@@ -115,7 +120,7 @@ public class BotApplication
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error processing activity {Type} {Id}", activity.Type, activity.Id);
-                throw new ActivityException("Error processing activity", ex, activity);
+                throw new BotHanlderException("Error processing activity", ex, activity);
             }
             finally
             {
@@ -152,5 +157,60 @@ public class BotApplication
             throw new Exception("ConversationClient not initialized");
         }
         return await _conversationClient.SendActivityAsync(activity, cancellationToken);
+    }
+}
+
+public delegate Task NextDelegate(CancellationToken cancellationToken);
+public interface ITurnMiddleWare
+{
+    Task OnTurnAsync(BotApplication botApplication, Activity activity, NextDelegate next, CancellationToken cancellationToken = default);
+}
+
+public class TurnMiddleware : ITurnMiddleWare, IEnumerable<ITurnMiddleWare>
+{
+
+    private readonly IList<ITurnMiddleWare> _middlewares = [];
+    public TurnMiddleware Use(ITurnMiddleWare middleware)
+    {
+        _middlewares.Add(middleware);
+        return this;
+    }
+
+
+    public async Task OnTurnAsync(BotApplication botApplication, Activity activity, NextDelegate next, CancellationToken cancellationToken = default)
+    {
+        await RunPipeline(botApplication, activity, null!, 0, cancellationToken).ConfigureAwait(false);
+        await next(cancellationToken).ConfigureAwait(false);
+    }
+
+    public Task RunPipeline(BotApplication botApplication, Activity activity, Func<Activity, Task>? callback, int nextMiddlewareIndex, CancellationToken cancellationToken)
+    {
+        if (nextMiddlewareIndex == _middlewares.Count)
+        {
+            if (callback is not null)
+            {
+                return callback!(activity) ?? Task.CompletedTask;
+            }
+            else
+            {
+                return Task.CompletedTask;
+            }
+        }
+        var nextMiddleware = _middlewares[nextMiddlewareIndex];
+        return nextMiddleware.OnTurnAsync(
+            botApplication,
+            activity,
+            (ct) => RunPipeline(botApplication, activity, callback, nextMiddlewareIndex + 1, ct),
+            cancellationToken);
+
+    }
+
+    public IEnumerator<ITurnMiddleWare> GetEnumerator()
+    {
+        return _middlewares.GetEnumerator();
+    }
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+        return _middlewares.GetEnumerator();
     }
 }
