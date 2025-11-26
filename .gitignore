@@ -6,3 +6,5 @@
 launchSettings.json
 appsettings.Development.json
 *.user
+
+_nupkgs/
