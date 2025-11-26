@@ -18,7 +18,6 @@ public class BotApplication
     private readonly string _serviceKey;
     private readonly TurnMiddleware _turnMiddleware;
 
-
     public BotApplication()
     {
         _logger = NullLogger<BotApplication>.Instance;
@@ -47,13 +46,14 @@ public class BotApplication
     public Func<ConversationUpdateActivityWrapper, CancellationToken, Task>? OnConversationUpdate { get; set; }
 
 
-    public async Task<string> ProcessAsync(HttpContext httpContext, CancellationToken cancellationToken = default)
+    public async Task<Activity> ProcessAsync(HttpContext httpContext, CancellationToken cancellationToken = default)
     {
         _conversationClient = httpContext.RequestServices.GetKeyedService<ConversationClient>(_serviceKey) ?? throw new Exception("ConversationClient not registered");
         
         _userTokenClient = httpContext.RequestServices.GetService<UserTokenClient>() ?? throw new Exception("UserTokenClient not registered");
 
         Activity activity = await ParseActivityAsync(httpContext.Request.Body, cancellationToken) ?? throw new InvalidOperationException("Invalid Activity");
+
         AgenticIdentity? agenticIdentity = AgenticIdentity.FromProperties(activity.Recipient!.Properties!);
 
         _userTokenClient.AgenticIdentity = agenticIdentity;
@@ -61,59 +61,71 @@ public class BotApplication
         
         using (_logger.BeginScope("Processing activity {Type} {Id}", activity.Type, activity.Id))
         {
-
-            await _turnMiddleware.RunPipeline(this, activity, this.OnActivity, 0, cancellationToken).ConfigureAwait(false);
-
-            //if (OnActivity is not null)
-            //{ 
-            //    await OnActivity?.Invoke(activity)!;
-            //}
-            //OnActivity?.Invoke(this, new ActivityEventArgs(activity));
-
-            switch (activity.Type)
+            try
             {
-                case "message":
-                    if (OnMessage is not null)
-                    {
-                        await OnMessage.Invoke(activity, cancellationToken);
-                        _logger.LogTrace("Message activity handled");
-                    }
-                    else
-                    {
-                        _logger.LogTrace("OnMessage handler is not set.");
-                    }
-                    break;
-                case "messageReaction":
-                    if (OnMessageReaction is not null)
-                    {
-                        await OnMessageReaction.Invoke(new MessageReactionActivityWrapper(activity), cancellationToken);
-                        _logger.LogTrace("MessageReaction activity handled");
-                    }
-                    else
-                    {
-                        _logger.LogTrace("OnMessageReaction handler is not set.");
-                    }
-                    break;
-                case "conversationUpdate":
-                    if (OnConversationUpdate is not null)
-                    {
-                        await OnConversationUpdate.Invoke(new ConversationUpdateActivityWrapper(activity), cancellationToken);
-                        _logger.LogTrace("ConversationUpdate activity handled");
-                    }
-                    else
-                    {
-                        _logger.LogTrace("OnConversationUpdate handler is not set.");
-                    }
-                    break;
-                default:
-                    _logger.LogInformation("Activity {Type} not handled", activity.Type);
-                    break;
+
+                await _turnMiddleware.RunPipeline(this, activity, this.OnActivity, 0, cancellationToken).ConfigureAwait(false);
+
+                //if (OnActivity is not null)
+                //{ 
+                //    await OnActivity?.Invoke(activity)!;
+                //}
+                //OnActivity?.Invoke(this, new ActivityEventArgs(activity));
+
+                switch (activity.Type)
+                {
+                    case "message":
+                        if (OnMessage is not null)
+                        {
+                            await OnMessage.Invoke(activity, cancellationToken);
+                            _logger.LogTrace("Message activity handled");
+                        }
+                        else
+                        {
+                            _logger.LogTrace("OnMessage handler is not set.");
+                        }
+                        break;
+                    case "messageReaction":
+                        if (OnMessageReaction is not null)
+                        {
+                            await OnMessageReaction.Invoke(new MessageReactionActivityWrapper(activity), cancellationToken);
+                            _logger.LogTrace("MessageReaction activity handled");
+                        }
+                        else
+                        {
+                            _logger.LogTrace("OnMessageReaction handler is not set.");
+                        }
+                        break;
+                    case "conversationUpdate":
+                        if (OnConversationUpdate is not null)
+                        {
+                            await OnConversationUpdate.Invoke(new ConversationUpdateActivityWrapper(activity), cancellationToken);
+                            _logger.LogTrace("ConversationUpdate activity handled");
+                        }
+                        else
+                        {
+                            _logger.LogTrace("OnConversationUpdate handler is not set.");
+                        }
+                        break;
+                    default:
+                        _logger.LogInformation("Activity {Type} not handled", activity.Type);
+                        break;
+                }
             }
-            return "Processed Activity: " + activity.Type;
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing activity {Type} {Id}", activity.Type, activity.Id);
+                throw new ActivityException("Error processing activity", ex, activity);
+            }
+            finally
+            {
+                _logger.LogInformation("Finished processing activity {Type} {Id}", activity.Type, activity.Id);
+            }
+            return activity;
         }
     }
 
-    private async Task<Activity?> ParseActivityAsync(Stream httpContentBody, CancellationToken cancellationToken= default)
+    public async Task<Activity?> ParseActivityAsync(Stream httpContentBody, CancellationToken cancellationToken= default)
     {
         Activity? activity;
         if (_logger.IsEnabled(LogLevel.Trace))

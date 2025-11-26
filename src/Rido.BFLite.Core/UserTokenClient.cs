@@ -54,7 +54,7 @@ public interface IUserTokenClient
     /// <summary>
     /// Gets the token status for each connection for the given user.
     /// </summary>
-    Task<GetTokenStatusResult> GetTokenStatusAsync(string userId, string channelId, string? include = null, CancellationToken cancellationToken = default);
+    Task<GetTokenStatusResult[]> GetTokenStatusAsync(string userId, string channelId, string? include = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Signs the user out of a connection.
@@ -141,7 +141,7 @@ public class UserTokenClient(
         return result;
     }
 
-    public async Task<IUserTokenClient.GetTokenStatusResult> GetTokenStatusAsync(string userId, string channelId, string? include = null, CancellationToken cancellationToken = default)
+    public async Task<IUserTokenClient.GetTokenStatusResult[]> GetTokenStatusAsync(string userId, string channelId, string? include = null, CancellationToken cancellationToken = default)
     {
         var queryParams = new Dictionary<string, string?>
         {
@@ -156,7 +156,11 @@ public class UserTokenClient(
 
         string? json = await CallApiAsync("api/usertoken/GetTokenStatus", queryParams, cancellationToken: cancellationToken).ConfigureAwait(false);
         var result = JsonSerializer.Deserialize<IList<IUserTokenClient.GetTokenStatusResult>>(json!, _defaultOptions)!;
-        return result[0]!;
+        if (result == null)
+        {
+            return [new IUserTokenClient.GetTokenStatusResult { HasToken = false}];
+        }
+        return [.. result];
 
     }
 

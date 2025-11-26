@@ -11,7 +11,7 @@ internal static class CompatActivity
 
     public static Rido.BFLite.Core.Schema.Activity FromCompatActivity(this Microsoft.Bot.Schema.Activity activity)
     {
-        StringBuilder sb = new StringBuilder();
+        StringBuilder sb = new();
         BotMessageHandlerBase.BotMessageSerializer.Serialize(new JsonTextWriter(new StringWriter(sb)), activity);
         return Rido.BFLite.Core.Schema.Activity.FromJsonString(sb.ToString());
     }

@@ -20,6 +20,7 @@ public class CompatAdapter(BotApplication botApplication, CompatBotAdapter compa
 
     public async Task ProcessAsync(HttpRequest httpRequest, HttpResponse httpResponse, IBot bot, CancellationToken cancellationToken = default)
     {
+        Rido.BFLite.Core.Schema.Activity? activity = null;
         botApplication.OnActivity = activity =>
         {
             TurnContext turnContext = new(compatBotAdapter, activity.ToCompatActivity());
@@ -28,19 +29,27 @@ public class CompatAdapter(BotApplication botApplication, CompatBotAdapter compa
         };
         try
         {
-            foreach (var middleware in MiddlewareSet)
+            foreach (Microsoft.Bot.Builder.IMiddleware? middleware in MiddlewareSet)
             {
                 botApplication.MiddleWare.Use(new CompatMiddlewareAdapter(middleware));
             }
 
-            await botApplication.ProcessAsync(httpRequest.HttpContext, cancellationToken);
+            activity = await botApplication.ProcessAsync(httpRequest.HttpContext, cancellationToken);
         }
         catch (Exception ex)
         {
             if (OnTurnError != null)
             {
-                TurnContext turnContext = new(compatBotAdapter, new Activity());
-                await OnTurnError(turnContext, ex);
+                if (ex is ActivityException aex)
+                {
+                    activity = aex.Activity;
+                    TurnContext turnContext = new(compatBotAdapter, activity!.ToCompatActivity());
+                    await OnTurnError(turnContext, ex);
+                }
+                else
+                {
+                    throw;
+                }
             }
         }
     }
