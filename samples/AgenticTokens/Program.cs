@@ -12,7 +12,7 @@ string clientId = "9d17cc32-c91b-4368-8494-1b29ccb0dbcf";
 string agentIdentity = "5081ddac-3d33-4766-98fe-80c38c5ce554";
 string userId = "96a64abd-3267-4143-b9a5-194e6f96ef2b";
 
-var builder = new HostApplicationBuilder(args);
+HostApplicationBuilder builder = new(args);
 
 builder.Services.AddTokenAcquisition(true);
 builder.Services.AddAgentIdentities();
@@ -30,21 +30,21 @@ builder.Services.Configure<MicrosoftIdentityApplicationOptions>(ops =>
             //SourceType = CredentialSource.SignedAssertionFromManagedIdentity,
             //ManagedIdentityClientId = miClientId
             SourceType = CredentialSource.ClientSecret,
-            ClientSecret = secret 
+            ClientSecret = secret
         }
     ];
 });
-var app = builder.Build();
+IHost app = builder.Build();
 
-string[] scopes = new[] { agentScope };
+string[] scopes = [agentScope];
 
 IAuthorizationHeaderProvider authorizationHeaderProvider = app.Services.GetRequiredService<IAuthorizationHeaderProvider>();
 AuthorizationHeaderProviderOptions options = new AuthorizationHeaderProviderOptions().WithAgentUserIdentity(agentIdentity, Guid.Parse(userId));
 
-ClaimsPrincipal user = new ClaimsPrincipal();
+ClaimsPrincipal user = new();
 
 string authHeader = await authorizationHeaderProvider
-    .CreateAuthorizationHeaderAsync(scopes,options,cancellationToken: default);
+    .CreateAuthorizationHeaderAsync(scopes, options, cancellationToken: default);
 
 
 user.Claims.ToList().ForEach(c => System.Console.WriteLine($"{c.Type}: {c.Value}"));

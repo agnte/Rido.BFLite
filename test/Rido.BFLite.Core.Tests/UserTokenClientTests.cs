@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Identity.Abstractions;
 using Moq;
 using Moq.Protected;
+using Rido.BFLite.Core.Hosting;
 using System.Collections.Specialized;
 using System.Net;
 using System.Text;
@@ -50,22 +51,21 @@ public class UserTokenClientTests : IDisposable
         // Add logging
         services.AddLogging(builder => builder.AddProvider(NullLoggerProvider.Instance));
 
-        // Add HttpClient factory with mocked HttpMessageHandler
-        services.AddHttpClient("ApiClient", client => { })
-            .ConfigurePrimaryHttpMessageHandler(() => _mockHttpMessageHandler.Object);
-
-        // Add default HttpClient with the same mocked handler for methods that don't use named client
-        services.AddHttpClient(string.Empty, client => { })
-            .ConfigurePrimaryHttpMessageHandler(() => _mockHttpMessageHandler.Object);
-
         // Add mocked authorization header provider
         services.AddSingleton(_mockAuthProvider.Object);
 
-        // Add AgentAuthorizationHeaderProviderService
-        services.AddScoped<AgenticAuthorizationHeaderProviderService>();
+        // Configure HttpClient with the BotAuthenticationHandler using the mocked primary handler
+        services.AddHttpClient("BotFrameworkUserToken")
+            .ConfigurePrimaryHttpMessageHandler(() => _mockHttpMessageHandler.Object)
+            .AddHttpMessageHandler(sp => new BotAuthenticationHandler(
+                sp.GetRequiredService<IAuthorizationHeaderProvider>(),
+                sp.GetRequiredService<ILogger<BotAuthenticationHandler>>(),
+                _testScope));
 
-        // Add UserTokenClient
-        services.AddScoped<UserTokenClient>();
+        // Add UserTokenClient with the named HttpClient
+        services.AddScoped(sp => new UserTokenClient(
+            sp.GetRequiredService<ILogger<UserTokenClient>>(),
+            sp.GetRequiredService<IHttpClientFactory>().CreateClient("BotFrameworkUserToken")));
 
         _serviceProvider = services.BuildServiceProvider();
         _userTokenClient = _serviceProvider.GetRequiredService<UserTokenClient>();
@@ -308,28 +308,46 @@ public class UserTokenClientTests : IDisposable
     }
 
     [Fact]
-    public async Task CallApiAsync_WithDisposedAuthProvider_ThrowsObjectDisposedException()
+    public async Task BotAuthenticationHandler_WithDisposedAuthProvider_ThrowsObjectDisposedException()
     {
         // Arrange
         Mock<IAuthorizationHeaderProvider> mockDisposedAuthProvider = new();
         mockDisposedAuthProvider.Setup(a => a.CreateAuthorizationHeaderForAppAsync(It.IsAny<string>(), It.IsAny<AuthorizationHeaderProviderOptions?>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new ObjectDisposedException("IServiceProvider"));
 
+        Mock<HttpMessageHandler> localMockHandler = new();
+        
+        // Setup the inner handler to return OK - the auth handler will throw before reaching it
+        localMockHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("{}", Encoding.UTF8, "application/json")
+            });
+
         // Create a separate DI container for this test
         using ServiceProvider services = new ServiceCollection()
             .AddSingleton<IConfiguration>(_serviceProvider.GetRequiredService<IConfiguration>())
             .AddLogging(builder => builder.AddProvider(NullLoggerProvider.Instance))
-            .AddHttpClient("ApiClient", client => { })
-                .ConfigurePrimaryHttpMessageHandler(() => _mockHttpMessageHandler.Object)
-            .Services
             .AddSingleton(mockDisposedAuthProvider.Object)
-            .AddScoped<AgenticAuthorizationHeaderProviderService>()
-            .AddScoped<UserTokenClient>()
+            .AddHttpClient("BotFrameworkUserToken")
+                .ConfigurePrimaryHttpMessageHandler(() => localMockHandler.Object)
+                .AddHttpMessageHandler(sp => new BotAuthenticationHandler(
+                    sp.GetRequiredService<IAuthorizationHeaderProvider>(),
+                    sp.GetRequiredService<ILogger<BotAuthenticationHandler>>(),
+                    _testScope))
+            .Services
+            .AddScoped(sp => new UserTokenClient(
+                sp.GetRequiredService<ILogger<UserTokenClient>>(),
+                sp.GetRequiredService<IHttpClientFactory>().CreateClient("BotFrameworkUserToken")))
             .BuildServiceProvider();
 
         UserTokenClient userTokenClient = services.GetRequiredService<UserTokenClient>();
 
-        // Act & Assert
+        // Act & Assert - The ObjectDisposedException from the auth provider should propagate through the handler
         ObjectDisposedException exception = await Assert.ThrowsAsync<ObjectDisposedException>(
             () => userTokenClient.GetTokenAsync("user", "connection", "channel"));
 
@@ -518,11 +536,10 @@ public class UserTokenClientTests : IDisposable
     {
         // Arrange & Act
         IHttpClientFactory httpClientFactory = _serviceProvider.GetRequiredService<IHttpClientFactory>();
-        HttpClient client = httpClientFactory.CreateClient("ApiClient");
+        HttpClient client = httpClientFactory.CreateClient("BotFrameworkUserToken");
 
         // Assert
         Assert.NotNull(client);
-        Assert.Equal("ApiClient", client.GetType().GetProperty("Options")?.GetValue(client)?.GetType().GetProperty("Name")?.GetValue(client.GetType().GetProperty("Options")?.GetValue(client)) ?? "ApiClient");
     }
 
     private void SetupHttpMessageHandler(HttpStatusCode statusCode, string content)

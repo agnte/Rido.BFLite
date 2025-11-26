@@ -6,9 +6,9 @@ namespace Rido.BFLite.Core.Hosting;
 public static class AppBuilderExtensions
 {
     public static TApp UseBotApplication<TApp>(
-        this IApplicationBuilder builder, 
-        string routePath = "api/messages", 
-        string authorizationPolicy = "DefaultPolicy") 
+        this IApplicationBuilder builder,
+        string routePath = "api/messages",
+        string authorizationPolicy = "DefaultPolicy")
             where TApp : BotApplication, new()
     {
         WebApplication? webApp = builder as WebApplication;
