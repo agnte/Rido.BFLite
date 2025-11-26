@@ -54,6 +54,10 @@ public class UserTokenClientTests : IDisposable
         services.AddHttpClient("ApiClient", client => { })
             .ConfigurePrimaryHttpMessageHandler(() => _mockHttpMessageHandler.Object);
 
+        // Add default HttpClient with the same mocked handler for methods that don't use named client
+        services.AddHttpClient(string.Empty, client => { })
+            .ConfigurePrimaryHttpMessageHandler(() => _mockHttpMessageHandler.Object);
+
         // Add mocked authorization header provider
         services.AddSingleton(_mockAuthProvider.Object);
 
