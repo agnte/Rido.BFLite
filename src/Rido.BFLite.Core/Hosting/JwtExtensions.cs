@@ -49,6 +49,7 @@ public static class JwtExtensions
 
     public static AuthorizationBuilder AddBotAuthorization(this IServiceCollection services)
     {
+        services.AddBotAuthentication();
         var authorizationBuilder = services
             .AddAuthorizationBuilder()
             .AddDefaultPolicy("DefaultPolicy", policy =>

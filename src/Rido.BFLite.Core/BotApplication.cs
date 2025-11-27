@@ -15,6 +15,12 @@ public class BotHanlderException(string message, Exception ex, Activity activity
     public Activity Activity { get; } = activity;
 }
 
+public delegate Task NextDelegate(CancellationToken cancellationToken);
+public interface ITurnMiddleWare
+{
+    Task OnTurnAsync(BotApplication botApplication, Activity activity, NextDelegate next, CancellationToken cancellationToken = default);
+}
+
 public class BotApplication
 {
     private readonly ILogger<BotApplication> _logger;
@@ -41,7 +47,7 @@ public class BotApplication
         logger.LogInformation("Started bot listener on {port} for AppID:{appid}", config["ASPNETCORE_URLS"], config[$"{_serviceKey}:ClientId"]);
     }
 
-    public TurnMiddleware MiddleWare => _turnMiddleware;
+    internal TurnMiddleware MiddleWare => _turnMiddleware;
 
     public UserTokenClient UserTokenClient => _userTokenClient ?? throw new Exception("UserTokenClient not initialized");
 
@@ -131,6 +137,12 @@ public class BotApplication
         }
     }
 
+    public ITurnMiddleWare Use(ITurnMiddleWare middleware)
+    {
+        _turnMiddleware.Use(middleware);
+        return _turnMiddleware;
+    }
+
     public async Task<Activity?> ParseActivityAsync(Stream httpContentBody, CancellationToken cancellationToken = default)
     {
         Activity? activity;
@@ -161,18 +173,11 @@ public class BotApplication
     }
 }
 
-public delegate Task NextDelegate(CancellationToken cancellationToken);
-public interface ITurnMiddleWare
-{
-    Task OnTurnAsync(BotApplication botApplication, Activity activity, NextDelegate next, CancellationToken cancellationToken = default);
-}
-
-
-public class TurnMiddleware : ITurnMiddleWare, IEnumerable<ITurnMiddleWare>
+internal class TurnMiddleware : ITurnMiddleWare, IEnumerable<ITurnMiddleWare>
 {
 
     private readonly IList<ITurnMiddleWare> _middlewares = [];
-    public TurnMiddleware Use(ITurnMiddleWare middleware)
+    internal TurnMiddleware Use(ITurnMiddleWare middleware)
     {
         _middlewares.Add(middleware);
         return this;

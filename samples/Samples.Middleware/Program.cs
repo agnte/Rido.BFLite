@@ -4,14 +4,12 @@ using Rido.BFLite.Core.Schema;
 using Samples.Middleware;
 
 WebApplicationBuilder webAppBuilder = WebApplication.CreateSlimBuilder(args);
-webAppBuilder.Services.AddBotAuthentication();
-webAppBuilder.Services.AddBotAuthorization();
 webAppBuilder.Services.AddBotApplication<BotApplication>();
 WebApplication webApp = webAppBuilder.Build();
 BotApplication botApp = webApp.UseBotApplication<BotApplication>();
 
-botApp.MiddleWare.Use(new MyTurnMiddleWare());
-botApp.MiddleWare.Use(new MyTurnMiddleWare());
+botApp.Use(new MyTurnMiddleWare());
+botApp.Use(new MyTurnMiddleWare());
 
 botApp.OnMessage = async (activity, cancellationToken) =>
 {

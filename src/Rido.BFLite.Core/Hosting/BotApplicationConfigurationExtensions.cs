@@ -15,6 +15,7 @@ public static class BotApplicationConfigurationExtensions
 
     public static IServiceCollection AddBotApplication<TApp>(this IServiceCollection services) where TApp : BotApplication, new()
     {
+        services.AddBotAuthorization();
         services.AddBotApplicationClients();
         services.AddSingleton<TApp>();
         return services;

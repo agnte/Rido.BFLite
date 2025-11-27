@@ -31,7 +31,7 @@ public class CompatAdapter(BotApplication botApplication, CompatBotAdapter compa
         {
             foreach (Microsoft.Bot.Builder.IMiddleware? middleware in MiddlewareSet)
             {
-                botApplication.MiddleWare.Use(new CompatMiddlewareAdapter(middleware));
+                botApplication.Use(new CompatMiddlewareAdapter(middleware));
             }
 
             activity = await botApplication.ProcessAsync(httpRequest.HttpContext, cancellationToken);
