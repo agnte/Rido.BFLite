@@ -56,8 +56,6 @@ public class BotApplication
 
     public Func<Activity, CancellationToken, Task>? OnMessage { get; set; }
     
-    public Func<ConversationUpdateActivityWrapper, CancellationToken, Task>? OnConversationUpdate { get; set; }
-
 
     public async Task<Activity> ProcessAsync(HttpContext httpContext, CancellationToken cancellationToken = default)
     {
@@ -79,12 +77,6 @@ public class BotApplication
 
                 await _turnMiddleware.RunPipeline(this, activity, this.OnActivity, 0, cancellationToken).ConfigureAwait(false);
 
-                //if (OnActivity is not null)
-                //{ 
-                //    await OnActivity?.Invoke(activity)!;
-                //}
-                //OnActivity?.Invoke(this, new ActivityEventArgs(activity));
-
                 switch (activity.Type)
                 {
                     case "message":
@@ -98,28 +90,17 @@ public class BotApplication
                             _logger.LogTrace("OnMessage handler is not set.");
                         }
                         break;
-                    //case "messageReaction":
-                    //    if (OnMessageReaction is not null)
+                    //case "conversationUpdate":
+                    //    if (OnConversationUpdate is not null)
                     //    {
-                    //        await OnMessageReaction.Invoke(new MessageReactionActivityWrapper(activity), cancellationToken);
-                    //        _logger.LogTrace("MessageReaction activity handled");
+                    //        await OnConversationUpdate.Invoke(new ConversationUpdateActivityWrapper(activity), cancellationToken);
+                    //        _logger.LogTrace("ConversationUpdate activity handled");
                     //    }
                     //    else
                     //    {
-                    //        _logger.LogTrace("OnMessageReaction handler is not set.");
+                    //        _logger.LogTrace("OnConversationUpdate handler is not set.");
                     //    }
                     //    break;
-                    case "conversationUpdate":
-                        if (OnConversationUpdate is not null)
-                        {
-                            await OnConversationUpdate.Invoke(new ConversationUpdateActivityWrapper(activity), cancellationToken);
-                            _logger.LogTrace("ConversationUpdate activity handled");
-                        }
-                        else
-                        {
-                            _logger.LogTrace("OnConversationUpdate handler is not set.");
-                        }
-                        break;
                     default:
                         _logger.LogInformation("Activity {Type} not handled", activity.Type);
                         break;

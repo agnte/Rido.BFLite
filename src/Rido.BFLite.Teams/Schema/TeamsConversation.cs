@@ -9,6 +9,10 @@ namespace Rido.BFLite.Teams.Schema
         public TeamsConversation(Conversation conversation)
         {
             Id = conversation.Id ?? string.Empty;
+            if (conversation.Properties == null)
+            {
+                return;
+            }
             if (conversation.Properties.TryGetValue("tenantId", out object? tenantObj) && tenantObj is JsonElement je && je.ValueKind == JsonValueKind.String)
             {
                 TenantId = je.GetString();

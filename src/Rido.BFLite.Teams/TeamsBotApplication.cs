@@ -8,8 +8,9 @@ namespace Rido.BFLite.Teams;
 
 public class TeamsBotApplication : BotApplication
 {
-    public Func<MessageReactionActivityWrapper, CancellationToken, Task>? OnMessageReaction { get; set; }
-    public Func<InstallationUpdateWrapper, CancellationToken, Task>? OnInstallationUpdate { get; set; }
+    public MessageReactionHandler? OnMessageReaction { get; set; }
+    public InstallationUpdateHandler? OnInstallationUpdate { get; set; }
+    public ConversationUpdateHandler? OnConversationUpdate { get; set; }
 
     public TeamsBotApplication()
     {
@@ -23,11 +24,15 @@ public class TeamsBotApplication : BotApplication
             TeamsActivity teamsActivity = TeamsActivity.FromActivity(activity);
             if (teamsActivity.Type == "installationUpdate" && OnInstallationUpdate is not null)
             {
-                await OnInstallationUpdate.Invoke(new InstallationUpdateWrapper(teamsActivity), default);
+                await OnInstallationUpdate.Invoke(new InstallationUpdateArgs(teamsActivity), default);
             }
             if (teamsActivity.Type == "messageReaction" && OnMessageReaction is not null)
             {
-                await OnMessageReaction.Invoke(new MessageReactionActivityWrapper(teamsActivity), default);
+                await OnMessageReaction.Invoke(new MessageReactionArgs(teamsActivity), default);
+            }
+            if (teamsActivity.Type == "conversationUpdate" && OnConversationUpdate is not null)
+            {
+                await OnConversationUpdate.Invoke(new ConversationUpdateArgs(teamsActivity), default);
             }
         };
     }

@@ -12,6 +12,9 @@ public class MessageReactionActivityTests
         string json = """
         {
             "type": "messageReaction",
+            "conversation": {
+                "id": "19"
+            },
             "reactionsAdded": [
                 {
                     "type": "like"
@@ -27,7 +30,7 @@ public class MessageReactionActivityTests
         Assert.Equal("messageReaction", act.Type);
 
         // MessageReactionActivity? mra = MessageReactionActivity.FromActivity(act);
-        MessageReactionActivityWrapper? mra = new(act);
+        MessageReactionArgs? mra = new(act);
 
         Assert.NotNull(mra);
         Assert.NotNull(mra!.ReactionsAdded);

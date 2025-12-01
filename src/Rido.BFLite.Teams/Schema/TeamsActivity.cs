@@ -26,6 +26,7 @@ public class TeamsActivity : Activity<TeamsChannelData>
         base.From = From;
         base.Recipient = Recipient;
         base.Conversation = Conversation;
+        base.Properties = activity.Properties;
     }
 
 
