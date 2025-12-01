@@ -135,7 +135,7 @@ internal class TurnMiddleware : ITurnMiddleWare, IEnumerable<ITurnMiddleWare>
                 return Task.CompletedTask;
             }
         }
-        var nextMiddleware = _middlewares[nextMiddlewareIndex];
+        ITurnMiddleWare nextMiddleware = _middlewares[nextMiddlewareIndex];
         return nextMiddleware.OnTurnAsync(
             botApplication,
             activity,

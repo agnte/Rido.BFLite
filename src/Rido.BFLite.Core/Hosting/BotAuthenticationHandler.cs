@@ -1,7 +1,7 @@
-using System.Net.Http.Headers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Identity.Abstractions;
 using Microsoft.Identity.Web;
+using System.Net.Http.Headers;
 
 namespace Rido.BFLite.Core.Hosting;
 
@@ -100,12 +100,12 @@ internal class BotAuthenticationHandler(
             _logger.LogDebug("Acquiring agentic token for appId: {AgenticAppId}, userId: {AgenticUserId}", agenticIdentity.AgentticAppId, agenticIdentity.AgenticUserId);
 
             options.WithAgentUserIdentity(agenticIdentity.AgentticAppId, Guid.Parse(agenticIdentity.AgenticUserId));
-            var token = await _authorizationHeaderProvider.CreateAuthorizationHeaderAsync([_scope], options, null, cancellationToken).ConfigureAwait(false);
+            string token = await _authorizationHeaderProvider.CreateAuthorizationHeaderAsync([_scope], options, null, cancellationToken).ConfigureAwait(false);
             return token;
         }
 
         _logger.LogDebug("Acquiring app-only token for scope: {Scope}", _scope);
-        var appToken = await _authorizationHeaderProvider.CreateAuthorizationHeaderForAppAsync(_scope, options, cancellationToken).ConfigureAwait(false);
+        string appToken = await _authorizationHeaderProvider.CreateAuthorizationHeaderForAppAsync(_scope, options, cancellationToken).ConfigureAwait(false);
         return appToken;
     }
 }

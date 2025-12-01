@@ -17,7 +17,7 @@ public class TeamsBotApplication : BotApplication
     {
     }
 
-    public TeamsBotApplication(IConfiguration config, ILogger<BotApplication> logger, string serviceKey = "AzureAd") 
+    public TeamsBotApplication(IConfiguration config, ILogger<BotApplication> logger, string serviceKey = "AzureAd")
         : base(config, logger, serviceKey)
     {
         OnActivity = async (activity, cancellationToken) =>

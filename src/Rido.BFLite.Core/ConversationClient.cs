@@ -22,12 +22,12 @@ public class ConversationClient(HttpClient httpClient, ILogger<ConversationClien
             return string.Empty;
         }
 
-        var agenticIdentity = AgenticIdentity.FromProperties(activity.From?.Properties!);
+        AgenticIdentity? agenticIdentity = AgenticIdentity.FromProperties(activity.From?.Properties!);
 
         string url = $"{activity.ServiceUrl!}v3/conversations/{activity.Conversation!.Id}/activities/";
         string body = activity.ToJson();
 
-        var request = new HttpRequestMessage(HttpMethod.Post, url)
+        HttpRequestMessage request = new(HttpMethod.Post, url)
         {
             Content = new StringContent(body, Encoding.UTF8, "application/json")
         };

@@ -84,7 +84,7 @@ public class UserTokenClient(ILogger<UserTokenClient> logger, HttpClient httpCli
 
     public async Task<IUserTokenClient.GetTokenResult> GetTokenAsync(string userId, string connectionName, string channelId, string? code = null, CancellationToken cancellationToken = default)
     {
-        var queryParams = new Dictionary<string, string?>
+        Dictionary<string, string?> queryParams = new()
         {
             { "userid", userId },
             { "connectionName", connectionName },
@@ -99,7 +99,7 @@ public class UserTokenClient(ILogger<UserTokenClient> logger, HttpClient httpCli
         string? resJson = await CallApiAsync("api/usertoken/GetToken", queryParams, cancellationToken: cancellationToken).ConfigureAwait(false);
         if (resJson is not null)
         {
-            var result = JsonSerializer.Deserialize<IUserTokenClient.GetTokenResult>(resJson, _defaultOptions)!;
+            IUserTokenClient.GetTokenResult result = JsonSerializer.Deserialize<IUserTokenClient.GetTokenResult>(resJson, _defaultOptions)!;
             return result;
         }
         return new IUserTokenClient.GetTokenResult();
@@ -107,7 +107,7 @@ public class UserTokenClient(ILogger<UserTokenClient> logger, HttpClient httpCli
 
     public async Task<IUserTokenClient.GetSignInResourceResult> GetTokenOrSignInResource(string userId, string connectionName, string channelId, string? finalRedirect = null, CancellationToken cancellationToken = default)
     {
-        var queryParams = new Dictionary<string, string?>
+        Dictionary<string, string?> queryParams = new()
         {
             { "userid", userId },
             { "connectionName", connectionName },
@@ -132,13 +132,13 @@ public class UserTokenClient(ILogger<UserTokenClient> logger, HttpClient httpCli
         //}
 
         var json = await CallApiAsync("api/usertoken/GetTokenOrSignInResource", queryParams, cancellationToken: cancellationToken).ConfigureAwait(false);
-        var result = JsonSerializer.Deserialize<IUserTokenClient.GetSignInResourceResult>(json!, _defaultOptions)!;
+        IUserTokenClient.GetSignInResourceResult result = JsonSerializer.Deserialize<IUserTokenClient.GetSignInResourceResult>(json!, _defaultOptions)!;
         return result;
     }
 
     public async Task<IUserTokenClient.GetTokenStatusResult[]> GetTokenStatusAsync(string userId, string channelId, string? include = null, CancellationToken cancellationToken = default)
     {
-        var queryParams = new Dictionary<string, string?>
+        Dictionary<string, string?> queryParams = new()
         {
             { "userid", userId },
             { "channelId", channelId }
@@ -150,7 +150,7 @@ public class UserTokenClient(ILogger<UserTokenClient> logger, HttpClient httpCli
         }
 
         string? json = await CallApiAsync("api/usertoken/GetTokenStatus", queryParams, cancellationToken: cancellationToken).ConfigureAwait(false);
-        var result = JsonSerializer.Deserialize<IList<IUserTokenClient.GetTokenStatusResult>>(json!, _defaultOptions)!;
+        IList<IUserTokenClient.GetTokenStatusResult> result = JsonSerializer.Deserialize<IList<IUserTokenClient.GetTokenStatusResult>>(json!, _defaultOptions)!;
         if (result == null || result.Count == 0)
         {
             return [new IUserTokenClient.GetTokenStatusResult { HasToken = false }];
@@ -161,7 +161,7 @@ public class UserTokenClient(ILogger<UserTokenClient> logger, HttpClient httpCli
 
     public async Task<bool> SignOutUserAsync(string userId, string? connectionName = null, string? channelId = null, CancellationToken cancellationToken = default)
     {
-        var queryParams = new Dictionary<string, string?>
+        Dictionary<string, string?> queryParams = new()
         {
             { "userid", userId }
         };
@@ -190,7 +190,7 @@ public class UserTokenClient(ILogger<UserTokenClient> logger, HttpClient httpCli
 
     public Task<string> ExchangeTokenAsync(string userId, string connectionName, string channelId, string exchangeToken, CancellationToken cancellationToken = default)
     {
-        var queryParams = new Dictionary<string, string?>
+        Dictionary<string, string?> queryParams = new()
         {
             { "userid", userId },
             { "connectionName", connectionName },
@@ -228,8 +228,8 @@ public class UserTokenClient(ILogger<UserTokenClient> logger, HttpClient httpCli
         var requestUri = QueryHelpers.AddQueryString(fullPath, queryParams);
         _logger.LogInformation("Calling API endpoint: {Endpoint}", requestUri);
 
-        var httpMethod = method ?? HttpMethod.Get;
-        var request = new HttpRequestMessage(httpMethod, requestUri);
+        HttpMethod httpMethod = method ?? HttpMethod.Get;
+        HttpRequestMessage request = new(httpMethod, requestUri);
 
         // Pass the agentic identity to the handler via request options
         request.Options.Set(BotAuthenticationHandler.AgenticIdentityKey, AgenticIdentity);
@@ -239,7 +239,7 @@ public class UserTokenClient(ILogger<UserTokenClient> logger, HttpClient httpCli
             request.Content = new StringContent(body, Encoding.UTF8, "application/json");
         }
 
-        var response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        HttpResponseMessage response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
         if (response.IsSuccessStatusCode)
         {
@@ -272,16 +272,16 @@ public class UserTokenClient(ILogger<UserTokenClient> logger, HttpClient httpCli
         _logger.LogInformation("Calling API endpoint with POST: {Endpoint}", fullPath);
 
         var jsonContent = JsonSerializer.Serialize(body);
-        var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+        StringContent content = new(jsonContent, Encoding.UTF8, "application/json");
 
-        var request = new HttpRequestMessage(HttpMethod.Post, fullPath)
+        HttpRequestMessage request = new(HttpMethod.Post, fullPath)
         {
             Content = content
         };
 
         request.Options.Set(BotAuthenticationHandler.AgenticIdentityKey, AgenticIdentity);
 
-        var response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        HttpResponseMessage response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
         if (response.IsSuccessStatusCode)
         {
