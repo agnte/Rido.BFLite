@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Identity.Abstractions;
 using Moq;
 using Moq.Protected;
+using Rido.BFLite.Core.Hosting;
 using System.Net;
 using System.Security.Claims;
 using System.Text;

@@ -3,16 +3,21 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Rido.BFLite.Core.Hosting;
 using Rido.BFLite.Core.Schema;
 using System.Collections;
-using System.Text;
-using System.Text.Json;
 
 namespace Rido.BFLite.Core;
 
 public class BotHanlderException(string message, Exception ex, Activity activity) : Exception(message, ex)
 {
     public Activity Activity { get; } = activity;
+}
+
+public delegate Task NextDelegate(CancellationToken cancellationToken);
+public interface ITurnMiddleWare
+{
+    Task OnTurnAsync(BotApplication botApplication, Activity activity, NextDelegate next, CancellationToken cancellationToken = default);
 }
 
 public class BotApplication
@@ -41,16 +46,14 @@ public class BotApplication
         logger.LogInformation("Started bot listener on {port} for AppID:{appid}", config["ASPNETCORE_URLS"], config[$"{_serviceKey}:ClientId"]);
     }
 
-    public TurnMiddleware MiddleWare => _turnMiddleware;
+    internal TurnMiddleware MiddleWare => _turnMiddleware;
 
     public UserTokenClient UserTokenClient => _userTokenClient ?? throw new Exception("UserTokenClient not initialized");
 
-    public Func<Activity, Task>? OnActivity { get; set; }
+    public Func<Activity, CancellationToken, Task>? OnActivity { get; set; }
 
     public Func<Activity, CancellationToken, Task>? OnMessage { get; set; }
-    public Func<MessageReactionActivityWrapper, CancellationToken, Task>? OnMessageReaction { get; set; }
-    public Func<ConversationUpdateActivityWrapper, CancellationToken, Task>? OnConversationUpdate { get; set; }
-
+    
 
     public async Task<Activity> ProcessAsync(HttpContext httpContext, CancellationToken cancellationToken = default)
     {
@@ -58,7 +61,13 @@ public class BotApplication
 
         _userTokenClient = httpContext.RequestServices.GetService<UserTokenClient>() ?? throw new Exception("UserTokenClient not registered");
 
-        Activity activity = await ParseActivityAsync(httpContext.Request.Body, cancellationToken) ?? throw new InvalidOperationException("Invalid Activity");
+        Activity activity = await Activity.FromJsonStreamAsync(httpContext.Request.Body, cancellationToken) ?? throw new InvalidOperationException("Invalid Activity");
+
+        if (_logger.IsEnabled(LogLevel.Trace))
+        {
+            _logger.LogTrace("Received activity: {Activity}", activity.ToJson());
+            //File.WriteAllText($"in_act_{activity.Type}_{activity.Id!.Replace("|", "_")}.json", activity.ToJson());
+        }
 
         AgenticIdentity? agenticIdentity = AgenticIdentity.FromProperties(activity.Recipient!.Properties!);
 
@@ -72,12 +81,6 @@ public class BotApplication
 
                 await _turnMiddleware.RunPipeline(this, activity, this.OnActivity, 0, cancellationToken).ConfigureAwait(false);
 
-                //if (OnActivity is not null)
-                //{ 
-                //    await OnActivity?.Invoke(activity)!;
-                //}
-                //OnActivity?.Invoke(this, new ActivityEventArgs(activity));
-
                 switch (activity.Type)
                 {
                     case "message":
@@ -89,28 +92,6 @@ public class BotApplication
                         else
                         {
                             _logger.LogTrace("OnMessage handler is not set.");
-                        }
-                        break;
-                    case "messageReaction":
-                        if (OnMessageReaction is not null)
-                        {
-                            await OnMessageReaction.Invoke(new MessageReactionActivityWrapper(activity), cancellationToken);
-                            _logger.LogTrace("MessageReaction activity handled");
-                        }
-                        else
-                        {
-                            _logger.LogTrace("OnMessageReaction handler is not set.");
-                        }
-                        break;
-                    case "conversationUpdate":
-                        if (OnConversationUpdate is not null)
-                        {
-                            await OnConversationUpdate.Invoke(new ConversationUpdateActivityWrapper(activity), cancellationToken);
-                            _logger.LogTrace("ConversationUpdate activity handled");
-                        }
-                        else
-                        {
-                            _logger.LogTrace("OnConversationUpdate handler is not set.");
                         }
                         break;
                     default:
@@ -131,24 +112,10 @@ public class BotApplication
         }
     }
 
-    public async Task<Activity?> ParseActivityAsync(Stream httpContentBody, CancellationToken cancellationToken = default)
+    public ITurnMiddleWare Use(ITurnMiddleWare middleware)
     {
-        Activity? activity;
-        if (_logger.IsEnabled(LogLevel.Trace))
-        {
-            using StreamReader sr = new(httpContentBody);
-            string body = await sr.ReadToEndAsync(cancellationToken);
-            _logger.LogTrace("Reading activity from request body \n {Body} \n", body);
-            using var ms = new MemoryStream(Encoding.UTF8.GetBytes(body));
-            activity = await JsonSerializer.DeserializeAsync<Activity>(ms, Activity.DefaultJsonOptions, cancellationToken);
-            //File.WriteAllText($"in_act_{activity.Type}_{activity.Id!.Replace("|", "_")}.json", body);
-        }
-        else
-        {
-            activity = await JsonSerializer.DeserializeAsync<Activity>(httpContentBody, Activity.DefaultJsonOptions, cancellationToken);
-        }
-
-        return activity;
+        _turnMiddleware.Use(middleware);
+        return _turnMiddleware;
     }
 
     public async Task<string> SendActivityAsync(Activity activity, CancellationToken cancellationToken = default)
@@ -161,18 +128,11 @@ public class BotApplication
     }
 }
 
-public delegate Task NextDelegate(CancellationToken cancellationToken);
-public interface ITurnMiddleWare
-{
-    Task OnTurnAsync(BotApplication botApplication, Activity activity, NextDelegate next, CancellationToken cancellationToken = default);
-}
-
-
-public class TurnMiddleware : ITurnMiddleWare, IEnumerable<ITurnMiddleWare>
+internal class TurnMiddleware : ITurnMiddleWare, IEnumerable<ITurnMiddleWare>
 {
 
     private readonly IList<ITurnMiddleWare> _middlewares = [];
-    public TurnMiddleware Use(ITurnMiddleWare middleware)
+    internal TurnMiddleware Use(ITurnMiddleWare middleware)
     {
         _middlewares.Add(middleware);
         return this;
@@ -185,13 +145,13 @@ public class TurnMiddleware : ITurnMiddleWare, IEnumerable<ITurnMiddleWare>
         await next(cancellationToken).ConfigureAwait(false);
     }
 
-    public Task RunPipeline(BotApplication botApplication, Activity activity, Func<Activity, Task>? callback, int nextMiddlewareIndex, CancellationToken cancellationToken)
+    public Task RunPipeline(BotApplication botApplication, Activity activity, Func<Activity, CancellationToken, Task>? callback, int nextMiddlewareIndex, CancellationToken cancellationToken)
     {
         if (nextMiddlewareIndex == _middlewares.Count)
         {
             if (callback is not null)
             {
-                return callback!(activity) ?? Task.CompletedTask;
+                return callback!(activity, cancellationToken) ?? Task.CompletedTask;
             }
             else
             {

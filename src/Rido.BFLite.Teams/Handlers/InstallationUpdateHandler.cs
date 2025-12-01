@@ -1,6 +1,11 @@
-﻿namespace Rido.BFLite.Teams.Schema;
+﻿using Rido.BFLite.Teams.Schema;
 
-public class InstallationUpdateWrapper(TeamsActivity act)
+namespace Rido.BFLite.Teams.Handlers;
+
+//public Func<InstallationUpdateWrapper, CancellationToken, Task>? OnInstallationUpdate { get; set; }
+public delegate Task InstallationUpdateHandler(InstallationUpdateArgs installationUpdateActivity,  CancellationToken cancellationToken = default);
+
+public class InstallationUpdateArgs(TeamsActivity act)
 {
     public TeamsActivity Activity { get; set; } = act;
 

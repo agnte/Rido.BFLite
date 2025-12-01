@@ -1,6 +1,7 @@
-using Rido.BFLite.Core.Schema;
+using Rido.BFLite.Teams.Handlers;
+using Rido.BFLite.Teams.Schema;
 
-namespace Rido.BFLite.Core.Tests;
+namespace Rido.BFLite.Teams.Tests;
 
 public class ConversationUpdateActivityTests
 {
@@ -10,6 +11,9 @@ public class ConversationUpdateActivityTests
         string json = """
         {
             "type": "conversationUpdate",
+            "conversation": {
+                "id": "19"
+            },
             "membersAdded": [
                 {
                     "id": "user1",
@@ -22,11 +26,11 @@ public class ConversationUpdateActivityTests
             ]
         }
         """;
-        Activity act = Activity.FromJsonString(json);
+        TeamsActivity act = TeamsActivity.FromJsonString(json);
         Assert.NotNull(act);
         Assert.Equal("conversationUpdate", act.Type);
 
-        ConversationUpdateActivityWrapper? cua = new(act);
+        ConversationUpdateArgs? cua = new(act);
 
         Assert.NotNull(cua);
         Assert.NotNull(cua.MembersAdded);
@@ -43,6 +47,9 @@ public class ConversationUpdateActivityTests
         string json = """
         {
             "type": "conversationUpdate",
+            "conversation": {
+                "id": "19"
+            },
             "membersRemoved": [
                 {
                     "id": "user2",
@@ -51,11 +58,11 @@ public class ConversationUpdateActivityTests
             ]
         }
         """;
-        Activity act = Activity.FromJsonString(json);
+        TeamsActivity act = TeamsActivity.FromJsonString(json);
         Assert.NotNull(act);
         Assert.Equal("conversationUpdate", act.Type);
 
-        ConversationUpdateActivityWrapper? cua = new(act);
+        ConversationUpdateArgs? cua = new(act);
 
         Assert.NotNull(cua);
         Assert.NotNull(cua.MembersRemoved);
@@ -70,6 +77,9 @@ public class ConversationUpdateActivityTests
         string json = """
         {
             "type": "conversationUpdate",
+            "conversation": {
+                "id": "19"
+            },
             "membersAdded": [
                 {
                     "id": "newuser",
@@ -84,11 +94,11 @@ public class ConversationUpdateActivityTests
             ]
         }
         """;
-        Activity act = Activity.FromJsonString(json);
+        TeamsActivity act = TeamsActivity.FromJsonString(json);
         Assert.NotNull(act);
         Assert.Equal("conversationUpdate", act.Type);
 
-        ConversationUpdateActivityWrapper? cua = new(act);
+        ConversationUpdateArgs? cua = new(act);
 
         Assert.NotNull(cua);
         Assert.NotNull(cua.MembersAdded);

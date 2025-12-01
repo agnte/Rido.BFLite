@@ -1,10 +1,14 @@
-﻿using System.Text.Json;
+﻿using Rido.BFLite.Teams.Schema;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
-namespace Rido.BFLite.Core.Schema;
+namespace Rido.BFLite.Teams.Handlers;
 
-public class MessageReactionActivityWrapper(Activity act)
+public delegate Task MessageReactionHandler(MessageReactionArgs reactionActivity, CancellationToken cancellationToken = default);
+
+public class MessageReactionArgs(TeamsActivity act)
 {
-    public Activity Activity { get; set; } = act;
+    public TeamsActivity Activity { get; set; } = act;
 
     public IList<MessageReaction>? ReactionsAdded { get; set; } =
         act.Properties.TryGetValue("reactionsAdded", out object? value)

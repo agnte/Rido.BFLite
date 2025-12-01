@@ -3,12 +3,12 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Identity.Abstractions;
 using Microsoft.Identity.Web;
 
-namespace Rido.BFLite.Core;
+namespace Rido.BFLite.Core.Hosting;
 
 /// <summary>
 /// Represents an agentic identity for user-delegated token acquisition.
 /// </summary>
-public class AgenticIdentity
+internal class AgenticIdentity
 {
     public string? AgentticAppId { get; set; }
     public string? AgenticUserId { get; set; }
@@ -44,7 +44,7 @@ public class AgenticIdentity
 /// <param name="logger">The logger instance.</param>
 /// <param name="scope">The scope for the token request.</param>
 /// <param name="aadConfigSectionName">The configuration section name for Azure AD settings.</param>
-public class BotAuthenticationHandler(
+internal class BotAuthenticationHandler(
     IAuthorizationHeaderProvider authorizationHeaderProvider,
     ILogger<BotAuthenticationHandler> logger,
     string scope,

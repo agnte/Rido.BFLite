@@ -21,6 +21,12 @@ public class TeamsActivity : Activity<TeamsChannelData>
         From = new TeamsConversationAccount(activity.From!);
         Recipient = new TeamsConversationAccount(activity.Recipient!);
         Conversation = new TeamsConversation(activity.Conversation!);
+        
+        base.ChannelData = ChannelData;
+        base.From = From;
+        base.Recipient = Recipient;
+        base.Conversation = Conversation;
+        base.Properties = activity.Properties;
     }
 
 
