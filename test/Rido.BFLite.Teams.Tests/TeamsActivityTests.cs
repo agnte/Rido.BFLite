@@ -24,7 +24,25 @@ public class TeamsActivityTests
         Assert.Equal("19:6848757105754c8981c67612732d9aa7@thread.tacv2", tcd.TeamsChannelId);
         Assert.Equal("19:6848757105754c8981c67612732d9aa7@thread.tacv2", tcd.Channel!.Id);
         Assert.Equal("b15a9416-0ad3-4172-9210-7beb711d3f70", activity.From.AadObjectId);
+        Assert.Equal("19:6848757105754c8981c67612732d9aa7@thread.tacv2;messageid=1759881511856", activity.Conversation.Id);
     }
+
+    [Fact]
+    public void DownCastTeamsActivity_To_CoreActivity()
+    {
+        Activity activity = Activity.FromJsonString(json);
+        Assert.Equal("19:6848757105754c8981c67612732d9aa7@thread.tacv2;messageid=1759881511856", activity.Conversation!.Id);
+        TeamsActivity teamsActivity = TeamsActivity.FromActivity(activity);
+        Assert.Equal("19:6848757105754c8981c67612732d9aa7@thread.tacv2;messageid=1759881511856", teamsActivity.Conversation!.Id);
+
+        void AssertCid(Activity<TeamsChannelData> a)
+        {
+            Assert.Equal("19:6848757105754c8981c67612732d9aa7@thread.tacv2;messageid=1759881511856", a.Conversation!.Id);
+        }
+        AssertCid(teamsActivity);
+
+    }
+
 
     const string json = """
             {
