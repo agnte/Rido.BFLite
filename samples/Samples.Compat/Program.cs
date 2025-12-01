@@ -8,10 +8,8 @@ using Samples.Compat;
 using System.Collections.Concurrent;
 
 WebApplicationBuilder webAppBuilder = WebApplication.CreateBuilder(args);
-
-webAppBuilder.Services.AddBotAuthentication();
-webAppBuilder.Services.AddBotAuthorization();
 webAppBuilder.Services.AddBotApplication<BotApplication>();
+
 webAppBuilder.Services.AddSingleton<CompatBotAdapter>();
 webAppBuilder.Services.AddSingleton<IBotFrameworkHttpAdapter, CustomAdapter>();
 webAppBuilder.Services.AddSingleton<IBot, EchoBot>();

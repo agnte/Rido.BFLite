@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Rido.BFLite.Core\Rido.BFLite.Core.csproj" />
+    <ProjectReference Include="..\..\src\Rido.BFLite.Teams\Rido.BFLite.Teams.csproj" />
   </ItemGroup>
 
 </Project>
