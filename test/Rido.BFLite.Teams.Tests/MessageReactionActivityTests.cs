@@ -1,6 +1,8 @@
 ﻿using Rido.BFLite.Core.Schema;
+using Rido.BFLite.Teams.Handlers;
+using Rido.BFLite.Teams.Schema;
 
-namespace Rido.BFLite.Core.Tests;
+namespace Rido.BFLite.Teams.Tests;
 
 public class MessageReactionActivityTests
 {
@@ -20,7 +22,7 @@ public class MessageReactionActivityTests
             ]
         }
         """;
-        Activity act = Activity.FromJsonString(json);
+        TeamsActivity act = TeamsActivity.FromJsonString(json);
         Assert.NotNull(act);
         Assert.Equal("messageReaction", act.Type);
 

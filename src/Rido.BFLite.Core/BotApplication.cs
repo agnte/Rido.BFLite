@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Rido.BFLite.Core.Hosting;
 using Rido.BFLite.Core.Schema;
 using System.Collections;
 using System.Text;
@@ -54,7 +55,7 @@ public class BotApplication
     public Func<Activity, Task>? OnActivity { get; set; }
 
     public Func<Activity, CancellationToken, Task>? OnMessage { get; set; }
-    public Func<MessageReactionActivityWrapper, CancellationToken, Task>? OnMessageReaction { get; set; }
+    
     public Func<ConversationUpdateActivityWrapper, CancellationToken, Task>? OnConversationUpdate { get; set; }
 
 
@@ -97,17 +98,17 @@ public class BotApplication
                             _logger.LogTrace("OnMessage handler is not set.");
                         }
                         break;
-                    case "messageReaction":
-                        if (OnMessageReaction is not null)
-                        {
-                            await OnMessageReaction.Invoke(new MessageReactionActivityWrapper(activity), cancellationToken);
-                            _logger.LogTrace("MessageReaction activity handled");
-                        }
-                        else
-                        {
-                            _logger.LogTrace("OnMessageReaction handler is not set.");
-                        }
-                        break;
+                    //case "messageReaction":
+                    //    if (OnMessageReaction is not null)
+                    //    {
+                    //        await OnMessageReaction.Invoke(new MessageReactionActivityWrapper(activity), cancellationToken);
+                    //        _logger.LogTrace("MessageReaction activity handled");
+                    //    }
+                    //    else
+                    //    {
+                    //        _logger.LogTrace("OnMessageReaction handler is not set.");
+                    //    }
+                    //    break;
                     case "conversationUpdate":
                         if (OnConversationUpdate is not null)
                         {

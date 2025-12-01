@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
+using Rido.BFLite.Core.Hosting;
 using Rido.BFLite.Core.Schema;
 using System.Text;
 using System.Text.Json;
@@ -70,7 +71,7 @@ public interface IUserTokenClient
     /// </summary>
     Task<string> GetAadTokensAsync(string userId, string connectionName, string channelId, string[]? resourceUrls = null, CancellationToken cancellationToken = default);
 
-    public AgenticIdentity? AgenticIdentity { get; set; }
+    //internal AgenticIdentity? AgenticIdentity { get; set; }
 }
 
 public class UserTokenClient(ILogger<UserTokenClient> logger, HttpClient httpClient) : IUserTokenClient
@@ -79,7 +80,7 @@ public class UserTokenClient(ILogger<UserTokenClient> logger, HttpClient httpCli
     private readonly string _apiEndpoint = "https://token.botframework.com";
     private readonly JsonSerializerOptions _defaultOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
-    public AgenticIdentity? AgenticIdentity { get; set; }
+    internal AgenticIdentity? AgenticIdentity { get; set; }
 
     public async Task<IUserTokenClient.GetTokenResult> GetTokenAsync(string userId, string connectionName, string channelId, string? code = null, CancellationToken cancellationToken = default)
     {

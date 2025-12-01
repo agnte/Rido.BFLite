@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using Rido.BFLite.Core.Hosting;
 using Rido.BFLite.Core.Schema;
 using System.Text;
 

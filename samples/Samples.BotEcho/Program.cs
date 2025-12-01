@@ -3,15 +3,11 @@ using Rido.BFLite.Core.Schema;
 using Rido.BFLite.Teams;
 
 WebApplicationBuilder webAppBuilder = WebApplication.CreateSlimBuilder(args);
-webAppBuilder.Services.AddBotAuthentication();
-webAppBuilder.Services.AddBotAuthorization();
 webAppBuilder.Services.AddBotApplication<TeamsBotApplication>();
 WebApplication webApp = webAppBuilder.Build();
 TeamsBotApplication botApp = webApp.UseBotApplication<TeamsBotApplication>();
 
 Activity? lastActivity = null;
-
-
 
 webApp.MapGet("api/notify", async (HttpContext httpContext) =>
 {
