@@ -6,8 +6,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Rido.BFLite.Core.Hosting;
 using Rido.BFLite.Core.Schema;
 using System.Collections;
-using System.Text;
-using System.Text.Json;
 
 namespace Rido.BFLite.Core;
 
@@ -52,7 +50,7 @@ public class BotApplication
 
     public UserTokenClient UserTokenClient => _userTokenClient ?? throw new Exception("UserTokenClient not initialized");
 
-    public Func<Activity, Task>? OnActivity { get; set; }
+    public Func<Activity, CancellationToken, Task>? OnActivity { get; set; }
 
     public Func<Activity, CancellationToken, Task>? OnMessage { get; set; }
     
@@ -63,7 +61,13 @@ public class BotApplication
 
         _userTokenClient = httpContext.RequestServices.GetService<UserTokenClient>() ?? throw new Exception("UserTokenClient not registered");
 
-        Activity activity = await ParseActivityAsync(httpContext.Request.Body, cancellationToken) ?? throw new InvalidOperationException("Invalid Activity");
+        Activity activity = await Activity.FromJsonStreamAsync(httpContext.Request.Body, cancellationToken) ?? throw new InvalidOperationException("Invalid Activity");
+
+        if (_logger.IsEnabled(LogLevel.Trace))
+        {
+            _logger.LogTrace("Received activity: {Activity}", activity.ToJson());
+            //File.WriteAllText($"in_act_{activity.Type}_{activity.Id!.Replace("|", "_")}.json", activity.ToJson());
+        }
 
         AgenticIdentity? agenticIdentity = AgenticIdentity.FromProperties(activity.Recipient!.Properties!);
 
@@ -90,17 +94,6 @@ public class BotApplication
                             _logger.LogTrace("OnMessage handler is not set.");
                         }
                         break;
-                    //case "conversationUpdate":
-                    //    if (OnConversationUpdate is not null)
-                    //    {
-                    //        await OnConversationUpdate.Invoke(new ConversationUpdateActivityWrapper(activity), cancellationToken);
-                    //        _logger.LogTrace("ConversationUpdate activity handled");
-                    //    }
-                    //    else
-                    //    {
-                    //        _logger.LogTrace("OnConversationUpdate handler is not set.");
-                    //    }
-                    //    break;
                     default:
                         _logger.LogInformation("Activity {Type} not handled", activity.Type);
                         break;
@@ -123,26 +116,6 @@ public class BotApplication
     {
         _turnMiddleware.Use(middleware);
         return _turnMiddleware;
-    }
-
-    public async Task<Activity?> ParseActivityAsync(Stream httpContentBody, CancellationToken cancellationToken = default)
-    {
-        Activity? activity;
-        if (_logger.IsEnabled(LogLevel.Trace))
-        {
-            using StreamReader sr = new(httpContentBody);
-            string body = await sr.ReadToEndAsync(cancellationToken);
-            _logger.LogTrace("Reading activity from request body \n {Body} \n", body);
-            using var ms = new MemoryStream(Encoding.UTF8.GetBytes(body));
-            activity = await JsonSerializer.DeserializeAsync<Activity>(ms, Activity.DefaultJsonOptions, cancellationToken);
-            //File.WriteAllText($"in_act_{activity.Type}_{activity.Id!.Replace("|", "_")}.json", body);
-        }
-        else
-        {
-            activity = await JsonSerializer.DeserializeAsync<Activity>(httpContentBody, Activity.DefaultJsonOptions, cancellationToken);
-        }
-
-        return activity;
     }
 
     public async Task<string> SendActivityAsync(Activity activity, CancellationToken cancellationToken = default)
@@ -172,13 +145,13 @@ internal class TurnMiddleware : ITurnMiddleWare, IEnumerable<ITurnMiddleWare>
         await next(cancellationToken).ConfigureAwait(false);
     }
 
-    public Task RunPipeline(BotApplication botApplication, Activity activity, Func<Activity, Task>? callback, int nextMiddlewareIndex, CancellationToken cancellationToken)
+    public Task RunPipeline(BotApplication botApplication, Activity activity, Func<Activity, CancellationToken, Task>? callback, int nextMiddlewareIndex, CancellationToken cancellationToken)
     {
         if (nextMiddlewareIndex == _middlewares.Count)
         {
             if (callback is not null)
             {
-                return callback!(activity) ?? Task.CompletedTask;
+                return callback!(activity, cancellationToken) ?? Task.CompletedTask;
             }
             else
             {

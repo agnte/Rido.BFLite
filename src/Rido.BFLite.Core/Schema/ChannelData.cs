@@ -6,5 +6,5 @@ public class ChannelData()
     public string? ClientActivityId { get; set; }
 
     [JsonExtensionData]
-    public IDictionary<string, object?> Properties { get; set; } = new Dictionary<string, object?>();
+    public ExtendedPropertiesDictionary Properties { get; set; } = new();
 }

@@ -1,4 +1,6 @@
-﻿using System.Text.Json;
+﻿using System.Net.NetworkInformation;
+using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace Rido.BFLite.Core.Schema;
@@ -8,6 +10,8 @@ public class ExtendedPropertiesDictionary : Dictionary<string, object?> { }
 public class Activity() : Activity<ChannelData>()
 {
     public static new Activity FromJsonString(string json) => JsonSerializer.Deserialize<Activity>(json, DefaultJsonOptions)!;
+    public static new ValueTask<Activity?> FromJsonStreamAsync(Stream stream, CancellationToken cancellationToken = default) =>
+        JsonSerializer.DeserializeAsync<Activity>(stream, DefaultJsonOptions, cancellationToken);
 }
 
 public class Activity<TChannelData>(string type = "message") where TChannelData : ChannelData, new()
@@ -34,7 +38,11 @@ public class Activity<TChannelData>(string type = "message") where TChannelData 
 
     public string ToJson() => JsonSerializer.Serialize(this, DefaultJsonOptions);
 
-    public static Activity<TChannelData> FromJsonString(string json) => JsonSerializer.Deserialize<Activity<TChannelData>>(json, DefaultJsonOptions)!;
+    public static Activity<TChannelData> FromJsonString(string json) 
+        => JsonSerializer.Deserialize<Activity<TChannelData>>(json, DefaultJsonOptions)!;
+
+    public static ValueTask<Activity<TChannelData>?> FromJsonStreamAsync(Stream stream, CancellationToken cancellationToken = default) 
+        => JsonSerializer.DeserializeAsync<Activity<TChannelData>>(stream, DefaultJsonOptions, cancellationToken);
 
     public Activity CreateReplyActivity(string text = "")
     {

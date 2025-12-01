@@ -16,23 +16,24 @@ public class TeamsBotApplication : BotApplication
     {
     }
 
-    public TeamsBotApplication(IConfiguration config, ILogger<BotApplication> logger, string serviceKey = "AzureAd") : base(config, logger, serviceKey)
+    public TeamsBotApplication(IConfiguration config, ILogger<BotApplication> logger, string serviceKey = "AzureAd") 
+        : base(config, logger, serviceKey)
     {
-        OnActivity = async activity =>
+        OnActivity = async (activity, cancellationToken) =>
         {
             logger.LogInformation("New activity received of type {type} from {from}", activity.Type, activity.From?.Id);
             TeamsActivity teamsActivity = TeamsActivity.FromActivity(activity);
             if (teamsActivity.Type == "installationUpdate" && OnInstallationUpdate is not null)
             {
-                await OnInstallationUpdate.Invoke(new InstallationUpdateArgs(teamsActivity), default);
+                await OnInstallationUpdate.Invoke(new InstallationUpdateArgs(teamsActivity), cancellationToken);
             }
             if (teamsActivity.Type == "messageReaction" && OnMessageReaction is not null)
             {
-                await OnMessageReaction.Invoke(new MessageReactionArgs(teamsActivity), default);
+                await OnMessageReaction.Invoke(new MessageReactionArgs(teamsActivity), cancellationToken);
             }
             if (teamsActivity.Type == "conversationUpdate" && OnConversationUpdate is not null)
             {
-                await OnConversationUpdate.Invoke(new ConversationUpdateArgs(teamsActivity), default);
+                await OnConversationUpdate.Invoke(new ConversationUpdateArgs(teamsActivity), cancellationToken);
             }
         };
     }

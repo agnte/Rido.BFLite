@@ -21,11 +21,11 @@ public class CompatAdapter(BotApplication botApplication, CompatBotAdapter compa
     public async Task ProcessAsync(HttpRequest httpRequest, HttpResponse httpResponse, IBot bot, CancellationToken cancellationToken = default)
     {
         Rido.BFLite.Core.Schema.Activity? activity = null;
-        botApplication.OnActivity = activity =>
+        botApplication.OnActivity = (activity, cancellationToken1) =>
         {
             TurnContext turnContext = new(compatBotAdapter, activity.ToCompatActivity());
             turnContext.TurnState.Add<Microsoft.Bot.Connector.Authentication.UserTokenClient>(new CompatUserTokenClient(botApplication.UserTokenClient));
-            return bot.OnTurnAsync(turnContext, cancellationToken);
+            return bot.OnTurnAsync(turnContext, cancellationToken1);
         };
         try
         {

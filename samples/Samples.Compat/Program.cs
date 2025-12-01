@@ -27,7 +27,7 @@ webApp.MapGet("/api/notify", async (HttpRequest request, HttpResponse response) 
 {
     IBotFrameworkHttpAdapter adapter = webApp.Services.GetRequiredService<IBotFrameworkHttpAdapter>();
     ConversationReference? convRef = webApp.Services.GetRequiredService<ConcurrentDictionary<string, ConversationReference>>().Values.FirstOrDefault();
-    await ((CompatAdapter)adapter).ContinueConversationAsync(
+    await ((CompatBotAdapter)adapter).ContinueConversationAsync(
         webApp.Configuration["MicrosoftAppId"]!,
         convRef!,
         async (turnContext, cancellationToken) =>
