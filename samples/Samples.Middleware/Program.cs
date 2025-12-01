@@ -11,7 +11,7 @@ BotApplication botApp = webApp.UseBotApplication<BotApplication>();
 botApp.Use(new MyTurnMiddleWare());
 botApp.Use(new MyTurnMiddleWare());
 
-botApp.OnMessage = async (activity, cancellationToken) =>
+botApp.OnActivity = async (activity, cancellationToken) =>
 {
     Activity reply = activity.CreateReplyActivity($"you said {activity.Text}, with ❤️ at {DateTime.Now:T}");
     await botApp.SendActivityAsync(reply, cancellationToken);

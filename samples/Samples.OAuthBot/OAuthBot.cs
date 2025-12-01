@@ -1,10 +1,11 @@
 ﻿using Microsoft.IdentityModel.JsonWebTokens;
 using Rido.BFLite.Core;
 using Rido.BFLite.Core.Schema;
+using Rido.BFLite.Teams;
 
 namespace Samples.OAuthBot;
 
-public class OAuthBot : BotApplication
+public class OAuthBot : TeamsBotApplication
 {
     public OAuthBot() { }
 

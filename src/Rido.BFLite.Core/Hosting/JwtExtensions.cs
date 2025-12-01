@@ -16,8 +16,8 @@ public static class JwtExtensions
 {
     public static AuthenticationBuilder AddBotAuthentication(this IServiceCollection services, string aadSectionName = "AzureAd")
     {
-        var authenticationBuilder = services.AddAuthentication();
-        var configuration = services.BuildServiceProvider().GetRequiredService<IConfiguration>();
+        AuthenticationBuilder authenticationBuilder = services.AddAuthentication();
+        IConfiguration configuration = services.BuildServiceProvider().GetRequiredService<IConfiguration>();
         //string agentScope = configuration[$"{aadSectionName}:AgentScope"]!;
         string audience = configuration[$"{aadSectionName}:ClientId"]!;
         string tenantId = configuration[$"{aadSectionName}:TenantId"]!;
@@ -31,12 +31,12 @@ public static class JwtExtensions
 
     public static AuthenticationBuilder AddBotAuthenticationEx(this IServiceCollection services, IEnumerable<string> aadSectionNames)
     {
-        var authenticationBuilder = services.AddAuthentication();
+        AuthenticationBuilder authenticationBuilder = services.AddAuthentication();
         List<string> audiences = [];
         List<string> tenants = [];
-        foreach (var aadSectionName in aadSectionNames)
+        foreach (string aadSectionName in aadSectionNames)
         {
-            var configuration = services.BuildServiceProvider().GetRequiredService<IConfiguration>();
+            IConfiguration configuration = services.BuildServiceProvider().GetRequiredService<IConfiguration>();
             // string agentScope = configuration[$"{aadSectionName}:AgentScope"]!;
             string audience = configuration[$"{aadSectionName}:ClientId"]!;
             string tenantId = configuration[$"{aadSectionName}:TenantId"]!;
@@ -50,7 +50,7 @@ public static class JwtExtensions
     public static AuthorizationBuilder AddBotAuthorization(this IServiceCollection services)
     {
         services.AddBotAuthentication();
-        var authorizationBuilder = services
+        AuthorizationBuilder authorizationBuilder = services
             .AddAuthorizationBuilder()
             .AddDefaultPolicy("DefaultPolicy", policy =>
             {
@@ -63,9 +63,9 @@ public static class JwtExtensions
 
     public static AuthorizationBuilder AddBotAuthorizationEx(this IServiceCollection services)
     {
-        var configuration = services.BuildServiceProvider().GetRequiredService<IConfiguration>();
+        IConfiguration configuration = services.BuildServiceProvider().GetRequiredService<IConfiguration>();
 
-        var authorizationBuilder = services.AddAuthorizationBuilder();
+        AuthorizationBuilder authorizationBuilder = services.AddAuthorizationBuilder();
         authorizationBuilder = authorizationBuilder.AddDefaultPolicy("DefaultPolicy", policy =>
         {
             policy.AuthenticationSchemes.Add("BotAndAgentScheme");
@@ -169,7 +169,7 @@ public static class JwtExtensions
 
         List<string> validIssuers = ["https://api.botframework.com"];
 
-        foreach (var tenantId in tenants)
+        foreach (string tenantId in tenants)
         {
             validIssuers.Add($"https://sts.windows.net/{tenantId}/");
             validIssuers.Add($"https://login.microsoftonline.com/{tenantId}/v2");

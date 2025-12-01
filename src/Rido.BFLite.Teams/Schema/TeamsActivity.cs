@@ -1,5 +1,4 @@
 ﻿using Rido.BFLite.Core.Schema;
-using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Rido.BFLite.Teams.Schema;
@@ -21,7 +20,7 @@ public class TeamsActivity : Activity<TeamsChannelData>
         From = new TeamsConversationAccount(activity.From!);
         Recipient = new TeamsConversationAccount(activity.Recipient!);
         Conversation = new TeamsConversation(activity.Conversation!);
-        
+
         base.ChannelData = ChannelData;
         base.From = From;
         base.Recipient = Recipient;

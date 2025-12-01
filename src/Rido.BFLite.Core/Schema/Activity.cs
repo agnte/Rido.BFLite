@@ -1,6 +1,4 @@
-﻿using System.Net.NetworkInformation;
-using System.Text;
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace Rido.BFLite.Core.Schema;
@@ -38,10 +36,10 @@ public class Activity<TChannelData>(string type = "message") where TChannelData 
 
     public string ToJson() => JsonSerializer.Serialize(this, DefaultJsonOptions);
 
-    public static Activity<TChannelData> FromJsonString(string json) 
+    public static Activity<TChannelData> FromJsonString(string json)
         => JsonSerializer.Deserialize<Activity<TChannelData>>(json, DefaultJsonOptions)!;
 
-    public static ValueTask<Activity<TChannelData>?> FromJsonStreamAsync(Stream stream, CancellationToken cancellationToken = default) 
+    public static ValueTask<Activity<TChannelData>?> FromJsonStreamAsync(Stream stream, CancellationToken cancellationToken = default)
         => JsonSerializer.DeserializeAsync<Activity<TChannelData>>(stream, DefaultJsonOptions, cancellationToken);
 
     public Activity CreateReplyActivity(string text = "")

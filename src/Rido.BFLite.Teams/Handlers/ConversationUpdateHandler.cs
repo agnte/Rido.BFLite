@@ -1,11 +1,6 @@
 ﻿using Rido.BFLite.Core.Schema;
 using Rido.BFLite.Teams.Schema;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace Rido.BFLite.Teams.Handlers
 {

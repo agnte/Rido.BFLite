@@ -52,9 +52,6 @@ public class BotApplication
 
     public Func<Activity, CancellationToken, Task>? OnActivity { get; set; }
 
-    public Func<Activity, CancellationToken, Task>? OnMessage { get; set; }
-    
-
     public async Task<Activity> ProcessAsync(HttpContext httpContext, CancellationToken cancellationToken = default)
     {
         _conversationClient = httpContext.RequestServices.GetKeyedService<ConversationClient>(_serviceKey) ?? throw new Exception("ConversationClient not registered");
@@ -66,7 +63,6 @@ public class BotApplication
         if (_logger.IsEnabled(LogLevel.Trace))
         {
             _logger.LogTrace("Received activity: {Activity}", activity.ToJson());
-            //File.WriteAllText($"in_act_{activity.Type}_{activity.Id!.Replace("|", "_")}.json", activity.ToJson());
         }
 
         AgenticIdentity? agenticIdentity = AgenticIdentity.FromProperties(activity.Recipient!.Properties!);
@@ -78,26 +74,7 @@ public class BotApplication
         {
             try
             {
-
                 await _turnMiddleware.RunPipeline(this, activity, this.OnActivity, 0, cancellationToken).ConfigureAwait(false);
-
-                switch (activity.Type)
-                {
-                    case "message":
-                        if (OnMessage is not null)
-                        {
-                            await OnMessage.Invoke(activity, cancellationToken);
-                            _logger.LogTrace("Message activity handled");
-                        }
-                        else
-                        {
-                            _logger.LogTrace("OnMessage handler is not set.");
-                        }
-                        break;
-                    default:
-                        _logger.LogInformation("Activity {Type} not handled", activity.Type);
-                        break;
-                }
             }
             catch (Exception ex)
             {
@@ -158,7 +135,7 @@ internal class TurnMiddleware : ITurnMiddleWare, IEnumerable<ITurnMiddleWare>
                 return Task.CompletedTask;
             }
         }
-        var nextMiddleware = _middlewares[nextMiddlewareIndex];
+        ITurnMiddleWare nextMiddleware = _middlewares[nextMiddlewareIndex];
         return nextMiddleware.OnTurnAsync(
             botApplication,
             activity,

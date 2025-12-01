@@ -28,7 +28,7 @@ public static class BotApplicationConfigurationExtensions
         return services;
     }
 
-    private static IServiceCollection AddBotApplicationClients(this IServiceCollection services, string aadConfigSectionName = "AzureAd")
+    public static IServiceCollection AddBotApplicationClients(this IServiceCollection services, string aadConfigSectionName = "AzureAd")
     {
         IConfiguration configuration = services.BuildServiceProvider().GetRequiredService<IConfiguration>();
         services

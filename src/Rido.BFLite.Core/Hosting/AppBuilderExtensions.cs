@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Rido.BFLite.Core.Schema;
 namespace Rido.BFLite.Core.Hosting;
 
 public static class AppBuilderExtensions
@@ -18,7 +19,7 @@ public static class AppBuilderExtensions
 
         webApp?.MapPost(routePath, async (HttpContext httpContext, CancellationToken cancellationToken) =>
         {
-            var resp = await app.ProcessAsync(httpContext, cancellationToken);
+            Activity resp = await app.ProcessAsync(httpContext, cancellationToken);
             return resp.Id;
         }).RequireAuthorization(authorizationPolicy);
 
@@ -39,7 +40,7 @@ public static class AppBuilderExtensions
 
         webApp?.MapPost(routePath, async (HttpContext httpContext, CancellationToken cancellationToken) =>
         {
-            var resp = await app.ProcessAsync(httpContext, cancellationToken);
+            Activity resp = await app.ProcessAsync(httpContext, cancellationToken);
             return resp.Id;
         }).RequireAuthorization(authorizationPolicy);
 
