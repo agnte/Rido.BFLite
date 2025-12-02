@@ -210,6 +210,26 @@ The library consists of:
 - Microsoft Azure Bot Service registration
 - Microsoft Entra ID (Azure AD) application registration
 
+## Security Considerations
+
+### JWT Authentication
+The library includes built-in JWT validation middleware that verifies all incoming Bot Framework requests. This ensures that only authenticated requests from the Bot Framework service are processed.
+
+### Rate Limiting
+For production deployments, consider implementing rate limiting at the infrastructure level (e.g., using Azure API Management, Azure Front Door, or Express rate-limiting middleware). The Bot Framework infrastructure typically handles rate limiting, but additional application-level protection may be beneficial depending on your deployment scenario.
+
+Example using express-rate-limit:
+```typescript
+import rateLimit from 'express-rate-limit';
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100 // limit each IP to 100 requests per windowMs
+});
+
+app.use('/api/messages', limiter, bot.createRouter());
+```
+
 ## Differences from .NET Version
 
 While maintaining API compatibility, this Node.js port has some differences:
