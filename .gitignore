@@ -8,3 +8,10 @@ appsettings.Development.json
 *.user
 
 _nupkgs/
+
+# Node.js
+node/node_modules/
+node/dist/
+node/.env
+node/*.log
+node/package-lock.json
