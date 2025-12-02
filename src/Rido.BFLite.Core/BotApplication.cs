@@ -103,6 +103,15 @@ public class BotApplication
         }
         return await _conversationClient.SendActivityAsync(activity, cancellationToken);
     }
+
+    public async Task<ResourceResponse> SendActivityWithResponseAsync(Activity activity, CancellationToken cancellationToken = default)
+    {
+        if (_conversationClient is null)
+        {
+            throw new Exception("ConversationClient not initialized");
+        }
+        return await _conversationClient.SendActivityWithResponseAsync(activity, cancellationToken);
+    }
 }
 
 internal class TurnMiddleware : ITurnMiddleWare, IEnumerable<ITurnMiddleWare>
