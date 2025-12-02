@@ -13,6 +13,7 @@ Rido.BFLite provides a streamlined API for creating Bot Framework bots without t
 - 📦 **Modular**: Core library with optional Teams extensions
 - ⚡ **Modern**: Built on .NET 9.0 with ASP.NET Core
 - 🎯 **Simple API**: Event-driven programming model
+- 🌊 **Streaming**: Real-time response streaming for AI-powered bots
 
 ## Packages
 
@@ -127,6 +128,32 @@ botApp.OnNewActivity += (sender, args) =>
 };
 ```
 
+### Streaming Responses
+
+Send real-time updates to clients as content is being generated:
+
+```csharp
+botApp.OnMessage = async (activity, cancellationToken) =>
+{
+    var streamingResponse = new StreamingResponse(botApp, activity)
+    {
+        EnableFeedbackLoop = true,
+        EnableGeneratedByAILabel = true
+    };
+    
+    streamingResponse.QueueInformativeUpdate("Generating response...");
+    
+    // Stream chunks as they're generated
+    streamingResponse.QueueTextChunk("Hello ");
+    streamingResponse.QueueTextChunk("from ");
+    streamingResponse.QueueTextChunk("streaming!");
+    
+    await streamingResponse.EndStream();
+};
+```
+
+For more details, see the [Streaming Documentation](docs/STREAMING.md).
+
 ## Architecture
 
 The library consists of:
@@ -136,6 +163,7 @@ The library consists of:
 - **ConversationClient**: HTTP client for sending activities to Bot Framework
 - **Activity Schema**: Strongly-typed models for Bot Framework activities
 - **Hosting Extensions**: ASP.NET Core integration and authentication
+- **StreamingResponse**: Real-time response streaming for AI-powered bots
 
 For detailed architecture diagrams and explanations, see the [Architecture Documentation](docs/ARCHITECTURE.md).
 
