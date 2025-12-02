@@ -50,6 +50,8 @@ public class BotApplication
 
     public UserTokenClient UserTokenClient => _userTokenClient ?? throw new Exception("UserTokenClient not initialized");
 
+    public ConversationClient ConversationClient => _conversationClient ?? throw new Exception("ConversationClient not initialized");
+
     public Func<Activity, CancellationToken, Task>? OnActivity { get; set; }
 
     public async Task<Activity> ProcessAsync(HttpContext httpContext, CancellationToken cancellationToken = default)
@@ -68,7 +70,7 @@ public class BotApplication
         AgenticIdentity? agenticIdentity = AgenticIdentity.FromProperties(activity.Recipient!.Properties!);
 
         _userTokenClient.AgenticIdentity = agenticIdentity;
-
+        _conversationClient.AgenticIdentity = agenticIdentity;
 
         using (_logger.BeginScope("Processing activity {Type} {Id}", activity.Type, activity.Id))
         {

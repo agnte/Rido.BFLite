@@ -31,6 +31,9 @@ webApp.MapGet("api/notify", async (HttpContext httpContext) =>
 
 botApp.OnMessage = async (activity, cancellationToken) =>
 {
+
+    var members = await botApp.ConversationClient.GetConversationMembersAsync(activity.ServiceUrl!, activity.Conversation!.Id!, cancellationToken: cancellationToken);
+
     Activity reply = activity.CreateReplyActivity($"you said {activity.Text}, with ❤️ at {DateTime.Now:T}");
     lastActivity = reply;
     await botApp.SendActivityAsync(reply, cancellationToken);
