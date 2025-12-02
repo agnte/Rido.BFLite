@@ -38,7 +38,7 @@ export class ConversationClient {
     }
 
     // Skip invoke activities (matching .NET behavior)
-    if (activity.type.toLowerCase().includes('invoke')) {
+    if (activity.type && activity.type.toLowerCase().includes('invoke')) {
       console.log(`Skipping invoke activity ${activity.id}`);
       return '';
     }

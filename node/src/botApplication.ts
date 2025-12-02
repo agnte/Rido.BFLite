@@ -136,10 +136,9 @@ export class BotApplication {
 
   /**
    * Creates an Express router with JWT middleware
-   * @param path - The path for the bot endpoint (default: '/api/messages')
-   * @returns Express router
+   * @returns Express router configured with JWT authentication
    */
-  createRouter(path: string = '/api/messages'): Router {
+  createRouter(): Router {
     this.initialize();
 
     const router = Router();
@@ -152,8 +151,8 @@ export class BotApplication {
     // Add JWT authentication middleware
     router.use(authorizeJWT({ audience: clientId }));
 
-    // Add the bot message handler
-    router.post(path, (req, res) => this.processRequest(req, res));
+    // Add the bot message handler at the root of the router
+    router.post('/', (req, res) => this.processRequest(req, res));
 
     return router;
   }

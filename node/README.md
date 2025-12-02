@@ -57,7 +57,8 @@ bot.onMessage = async (activity) => {
   await bot.sendActivity(reply);
 };
 
-app.use(bot.createRouter());
+// Mount the bot router at /api/messages
+app.use('/api/messages', bot.createRouter());
 
 const PORT = process.env.PORT || 3978;
 app.listen(PORT, () => {
@@ -83,7 +84,7 @@ The main class for building bots.
 
 - **`sendActivity(activity: Activity): Promise<string>`**: Sends an activity
 - **`reply(activity: Activity, text: string): Promise<string>`**: Sends a reply to an activity
-- **`createRouter(path?: string): Router`**: Creates an Express router with JWT middleware
+- **`createRouter(): Router`**: Creates an Express router with JWT middleware (mount at your desired path)
 
 ### Schema Types
 

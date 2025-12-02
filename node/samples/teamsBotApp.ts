@@ -160,9 +160,6 @@ async function sendInfo(activity: Activity): Promise<void> {
   await bot.sendActivity(reply);
 }
 
-// Mount the bot router
-app.use(bot.createRouter());
-
 // Proactive messaging endpoint
 app.get('/api/notify', async (req, res) => {
   try {
@@ -202,6 +199,9 @@ app.get('/health', (req, res) => {
     hasConversation: !!lastActivity
   });
 });
+
+// Mount the bot router at /api/messages
+app.use('/api/messages', bot.createRouter());
 
 // Start the server
 const PORT = process.env.PORT || 3978;

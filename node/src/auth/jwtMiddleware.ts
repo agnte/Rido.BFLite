@@ -47,33 +47,35 @@ function getJwksClient(issuer: string): JwksClient {
 }
 
 /**
- * Gets the signing key from JWKS
+ * Creates a function to get the signing key from JWKS
  */
-function getSigningKey(header: jwt.JwtHeader, callback: jwt.SigningKeyCallback): void {
-  if (!header.kid) {
-    return callback(new Error('No kid in token header'));
-  }
-
-  // Decode the token to get the issuer without validation
-  const decoded = jwt.decode(header as any, { complete: true }) as jwt.Jwt | null;
-  if (!decoded || typeof decoded.payload === 'string') {
-    return callback(new Error('Invalid token'));
-  }
-
-  const issuer = decoded.payload.iss;
-  if (!issuer) {
-    return callback(new Error('No issuer in token'));
-  }
-
-  const client = getJwksClient(issuer);
-  
-  client.getSigningKey(header.kid, (err, key) => {
-    if (err) {
-      return callback(err);
+function createSigningKeyGetter(token: string) {
+  return (header: jwt.JwtHeader, callback: jwt.SigningKeyCallback): void => {
+    if (!header.kid) {
+      return callback(new Error('No kid in token header'));
     }
-    const signingKey = key?.getPublicKey();
-    callback(null, signingKey);
-  });
+
+    // Decode the token to get the issuer without validation
+    const decoded = jwt.decode(token, { complete: true }) as jwt.Jwt | null;
+    if (!decoded || typeof decoded.payload === 'string') {
+      return callback(new Error('Invalid token'));
+    }
+
+    const issuer = decoded.payload.iss;
+    if (!issuer) {
+      return callback(new Error('No issuer in token'));
+    }
+
+    const client = getJwksClient(issuer);
+    
+    client.getSigningKey(header.kid, (err, key) => {
+      if (err) {
+        return callback(err);
+      }
+      const signingKey = key?.getPublicKey();
+      callback(null, signingKey);
+    });
+  };
 }
 
 /**
@@ -106,7 +108,7 @@ export function authorizeJWT(options: JwtValidationOptions) {
       // Verify the token
       jwt.verify(
         token,
-        getSigningKey,
+        createSigningKeyGetter(token),
         {
           audience: options.audience,
           issuer: validIssuers.length === 1 ? validIssuers[0] : validIssuers as [string, ...string[]],

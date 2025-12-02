@@ -23,13 +23,13 @@ bot.onMessage = async (activity) => {
   await bot.sendActivity(reply);
 };
 
-// Mount the bot router
-app.use(bot.createRouter());
-
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'healthy', timestamp: new Date().toISOString() });
 });
+
+// Mount the bot router at /api/messages
+app.use('/api/messages', bot.createRouter());
 
 // Start the server
 const PORT = process.env.PORT || 3978;
