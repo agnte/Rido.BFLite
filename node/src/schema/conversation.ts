@@ -1,5 +1,3 @@
-import { ExtendedPropertiesDictionary } from './activity';
-
 /**
  * ConversationAccount interface matching the .NET schema
  */

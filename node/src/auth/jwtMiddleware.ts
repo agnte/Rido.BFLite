@@ -85,7 +85,7 @@ export function authorizeJWT(options: JwtValidationOptions) {
   const validIssuers = options.validIssuers || [
     'https://api.botframework.com',
     `https://sts.windows.net/${process.env.TENANT_ID || 'common'}/`,
-    `https://login.microsoftonline.com/${process.env.TENANT_ID || 'common'}/v2`
+    `https://login.microsoftonline.com/${process.env.TENANT_ID || 'common'}/v2.0`
   ];
 
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
