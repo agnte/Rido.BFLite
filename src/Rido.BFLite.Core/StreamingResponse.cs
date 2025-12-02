@@ -72,6 +72,13 @@ public class StreamingResponse
     public string Message { get; private set; } = "";
 
     /// <summary>
+    /// Delay between streaming updates in milliseconds.
+    /// Default is 1500ms (1.5 seconds) to prevent overwhelming the Bot Framework service.
+    /// This follows the Microsoft Teams SDK implementation pattern.
+    /// </summary>
+    public int StreamingDelayMs { get; set; } = 1500;
+
+    /// <summary>
     /// Gets the number of updates sent for the stream.
     /// </summary>
     /// <returns>Number of updates sent so far.</returns>
@@ -344,7 +351,9 @@ public class StreamingResponse
 
         ResourceResponse response = await _botApplication.SendActivityWithResponseAsync(activity).ConfigureAwait(false);
 
-        await Task.Delay(TimeSpan.FromSeconds(1.5));
+        // Delay between updates to prevent overwhelming the Bot Framework service
+        // This is configurable via the StreamingDelayMs property
+        await Task.Delay(StreamingDelayMs).ConfigureAwait(false);
 
         // Save assigned stream ID
         if (string.IsNullOrEmpty(StreamId))
