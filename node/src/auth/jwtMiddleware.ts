@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import * as jwt from 'jsonwebtoken';
-import * as jwksClient from 'jwks-rsa';
+import { JwksClient } from 'jwks-rsa';
 
 /**
  * JWT validation options
@@ -13,12 +13,12 @@ export interface JwtValidationOptions {
 /**
  * Creates JWKS clients for different issuers
  */
-const jwksClients = new Map<string, jwksClient.JwksClient>();
+const jwksClients = new Map<string, JwksClient>();
 
 /**
  * Gets the JWKS client for a given issuer
  */
-function getJwksClient(issuer: string): jwksClient.JwksClient {
+function getJwksClient(issuer: string): JwksClient {
   let client = jwksClients.get(issuer);
   
   if (!client) {
@@ -33,7 +33,7 @@ function getJwksClient(issuer: string): jwksClient.JwksClient {
       jwksUri = `https://login.microsoftonline.com/${tenantId}/discovery/v2.0/keys`;
     }
     
-    client = jwksClient.jwksClient({
+    client = new JwksClient({
       jwksUri,
       cache: true,
       cacheMaxAge: 86400000, // 24 hours
@@ -109,10 +109,10 @@ export function authorizeJWT(options: JwtValidationOptions) {
         getSigningKey,
         {
           audience: options.audience,
-          issuer: validIssuers,
+          issuer: validIssuers.length === 1 ? validIssuers[0] : validIssuers as [string, ...string[]],
           algorithms: ['RS256']
         },
-        (err, decoded) => {
+        (err: jwt.VerifyErrors | null, decoded: any) => {
           if (err) {
             console.error('JWT verification failed:', err.message);
             res.status(401).json({ error: 'Invalid token', details: err.message });
