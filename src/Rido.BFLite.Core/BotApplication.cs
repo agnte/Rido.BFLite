@@ -112,6 +112,18 @@ public class BotApplication
         }
         return await _conversationClient.SendActivityWithResponseAsync(activity, cancellationToken);
     }
+
+    /// <summary>
+    /// Creates a stream for sending incremental updates to the client.
+    /// This provides a simple API matching the Microsoft teams.net pattern.
+    /// </summary>
+    /// <param name="incomingActivity">The incoming activity that triggered the stream</param>
+    /// <param name="onChunk">Callback to handle each text chunk</param>
+    /// <returns>An IStream instance for emitting text chunks</returns>
+    public IStream CreateStream(Activity incomingActivity, OnStreamChunk onChunk)
+    {
+        return new MessageStream(onChunk);
+    }
 }
 
 internal class TurnMiddleware : ITurnMiddleWare, IEnumerable<ITurnMiddleWare>

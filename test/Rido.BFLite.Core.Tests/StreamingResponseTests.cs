@@ -197,5 +197,66 @@ namespace Rido.BFLite.Core.Tests
             // Assert
             Assert.Equal("response-123", response.Id);
         }
+
+        [Fact]
+        public void MessageStream_CanBeCreated()
+        {
+            // Arrange
+            var chunks = new List<string>();
+            OnStreamChunk handler = async (text) =>
+            {
+                chunks.Add(text);
+                await Task.CompletedTask;
+            };
+
+            // Act
+            var stream = new MessageStream(handler);
+
+            // Assert
+            Assert.NotNull(stream);
+        }
+
+        [Fact]
+        public void MessageStream_Emit_CallsHandler()
+        {
+            // Arrange
+            var chunks = new List<string>();
+            OnStreamChunk handler = async (text) =>
+            {
+                chunks.Add(text);
+                await Task.CompletedTask;
+            };
+            var stream = new MessageStream(handler);
+
+            // Act
+            stream.Emit("Hello");
+            stream.Emit("World");
+
+            // Assert
+            Assert.Equal(2, chunks.Count);
+            Assert.Equal("Hello", chunks[0]);
+            Assert.Equal("World", chunks[1]);
+        }
+
+        [Fact]
+        public void MessageStream_ThrowsOnNullHandler()
+        {
+            // Act & Assert
+            Assert.Throws<ArgumentNullException>(() => new MessageStream(null!));
+        }
+
+        [Fact]
+        public void IStream_InterfaceIsImplemented()
+        {
+            // Arrange
+            OnStreamChunk handler = async (text) => await Task.CompletedTask;
+            
+            // Act
+            IStream stream = new MessageStream(handler);
+
+            // Assert
+            Assert.NotNull(stream);
+            stream.Emit("test");
+        }
     }
 }
