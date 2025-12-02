@@ -1,6 +1,7 @@
 ﻿using Microsoft.Bot.Connector;
 using Microsoft.Bot.Schema;
 using Microsoft.Rest;
+using Newtonsoft.Json.Linq;
 using Rido.BFLite.Core;
 
 namespace Rido.BFLite.Compat.Adapter
@@ -73,6 +74,20 @@ namespace Rido.BFLite.Compat.Adapter
                     Id = m.Id,
                     Name = m.Name
                 })]
+            };
+        }
+
+        public async Task<HttpOperationResponse<ChannelAccount>> GetConversationMemberWithHttpMessagesAsync(string userId, string conversationId, Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default)
+        {
+            Core.Schema.ConversationAccount r = await client.GetConversationMemberAsync(ServiceUrl!, conversationId, userId, customHeaders, cancellationToken);
+            return new HttpOperationResponse<ChannelAccount>()
+            {
+                Body = new ChannelAccount()
+                {
+                    Id = r.Id,
+                    Name = r.Name,
+                    Properties = JObject.FromObject(r.Properties! ?? new Dictionary<string, object>())
+                }
             };
         }
 

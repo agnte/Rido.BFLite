@@ -81,7 +81,7 @@ public class ConversationClient(HttpClient httpClient, ILogger<ConversationClien
         }
     }
 
-    public async Task<IList<ConversationAccount>> GetConversationMemberAsync(string serviceUrl, string conversationId, string userId, Dictionary<string, List<string>> customHeaders = null!, CancellationToken cancellationToken = default)
+    public async Task<ConversationAccount> GetConversationMemberAsync(string serviceUrl, string conversationId, string userId, Dictionary<string, List<string>> customHeaders = null!, CancellationToken cancellationToken = default)
     {
 
         string url = $"{serviceUrl}v3/conversations/{conversationId}/members/{userId}";
@@ -99,8 +99,8 @@ public class ConversationClient(HttpClient httpClient, ILogger<ConversationClien
         logger.LogTrace("Response Status {status}, content {content}", resp.StatusCode, respContent);
         if (resp.IsSuccessStatusCode)
         {
-            IList<ConversationAccount>? members = System.Text.Json.JsonSerializer.Deserialize<IList<ConversationAccount>>(respContent);
-            return members ?? [];
+            ConversationAccount? member = System.Text.Json.JsonSerializer.Deserialize<ConversationAccount>(respContent);
+            return member!;
         }
         else
         {
