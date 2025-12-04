@@ -1,13 +1,14 @@
 ﻿using Rido.BFLite.Core.Hosting;
 using Rido.BFLite.Core.Schema;
 using Rido.BFLite.Teams;
+using Rido.BFLite.Teams.Schema;
 
 WebApplicationBuilder webAppBuilder = WebApplication.CreateSlimBuilder(args);
 webAppBuilder.Services.AddBotApplication<TeamsBotApplication>();
 WebApplication webApp = webAppBuilder.Build();
 TeamsBotApplication botApp = webApp.UseBotApplication<TeamsBotApplication>();
 
-Activity? lastActivity = null;
+TeamsActivity? lastActivity = null;
 
 webApp.MapGet("api/notify", async (HttpContext httpContext) =>
 {
@@ -29,37 +30,34 @@ webApp.MapGet("api/notify", async (HttpContext httpContext) =>
     return Results.Ok("Notification endpoint is working");
 });
 
-botApp.OnMessage = async (activity, cancellationToken) =>
+botApp.OnMessage = async (context, cancellationToken) =>
 {
-    Activity reply = activity.CreateReplyActivity($"you said {activity.Text}, with ❤️ at {DateTime.Now:T}");
-    lastActivity = reply;
-    await botApp.SendActivityAsync(reply, cancellationToken);
+    lastActivity = context.Activity;
+    await context.SendActivityAsync($"you said {context.Activity.Text}, with ❤️ at {DateTime.Now:T}", cancellationToken);
 };
 
-botApp.OnMessageReaction = async (reaction, cancellationToken) =>
+botApp.OnMessageReaction = async (reaction, context, cancellationToken) =>
 {
     string result = @$"Reaction received at {DateTime.Now:T}. " +
     $"                  Added: {reaction.ReactionsAdded?.FirstOrDefault()?.Type} " +
     $"                  Removed: {reaction.ReactionsRemoved?.FirstOrDefault()?.Type}";
 
-    Activity reply = reaction.Activity.CreateReplyActivity(result);
-    await botApp.SendActivityAsync(reply, cancellationToken);
+    await context.SendActivityAsync(result, cancellationToken);
 };
 
-botApp.OnInstallationUpdate = async (installationUpdate, cancellationToken) =>
+botApp.OnInstallationUpdate = async (installationUpdate, context, cancellationToken) =>
 {
-    Console.WriteLine($"Installation update event. Action: {installationUpdate.Action} for {installationUpdate.SelectedChannelId} channel");
-    await Task.CompletedTask;
+    await context.SendActivityAsync($"Installation update event. Action: {installationUpdate.Action} for {installationUpdate.SelectedChannelId} channel", cancellationToken);
 };
 
-botApp.OnConversationUpdate = async (conversationUpdate, cancellationToken) =>
+botApp.OnConversationUpdate = async (conversationUpdate, context, cancellationToken) =>
 {
     string result = " Members changed";
     result += "\n\n Added: \n\n";
     conversationUpdate.MembersAdded?.ToList().ForEach(ma => result += $" **{ma.Name}** \n");
     result += "Removed: \n\n";
     conversationUpdate.MembersRemoved?.ToList().ForEach(mr => result += $" {mr.Name}\n");
-    await botApp.SendActivityAsync(conversationUpdate.Activity.CreateReplyActivity(result), cancellationToken);
+    await context.SendActivityAsync(result, cancellationToken);
 };
 
 webApp.Run();

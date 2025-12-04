@@ -24,21 +24,22 @@ public class TeamsBotApplication : BotApplication
         {
             logger.LogInformation("New activity received of type {type} from {from}", activity.Type, activity.From?.Id);
             TeamsActivity teamsActivity = TeamsActivity.FromActivity(activity);
+            var context = new Context(this, teamsActivity);
             if (teamsActivity.Type == TeamsActivityTypes.Message && OnMessage is not null)
             {
-                await OnMessage.Invoke(teamsActivity, cancellationToken);
+                await OnMessage.Invoke(context, cancellationToken);
             }
             if (teamsActivity.Type == TeamsActivityTypes.InstallationUpdate && OnInstallationUpdate is not null)
             {
-                await OnInstallationUpdate.Invoke(new InstallationUpdateArgs(teamsActivity), cancellationToken);
+                await OnInstallationUpdate.Invoke(new InstallationUpdateArgs(teamsActivity), context, cancellationToken);
             }
             if (teamsActivity.Type == TeamsActivityTypes.MessageReaction && OnMessageReaction is not null)
             {
-                await OnMessageReaction.Invoke(new MessageReactionArgs(teamsActivity), cancellationToken);
+                await OnMessageReaction.Invoke(new MessageReactionArgs(teamsActivity), context, cancellationToken);
             }
             if (teamsActivity.Type == TeamsActivityTypes.ConversationUpdate && OnConversationUpdate is not null)
             {
-                await OnConversationUpdate.Invoke(new ConversationUpdateArgs(teamsActivity), cancellationToken);
+                await OnConversationUpdate.Invoke(new ConversationUpdateArgs(teamsActivity), context, cancellationToken);
             }
         };
     }
