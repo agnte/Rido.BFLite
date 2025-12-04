@@ -12,41 +12,40 @@ public class OAuthBot : TeamsBotApplication
     public OAuthBot(IConfiguration config, ILogger<OAuthBot> logger) 
         : base(config, logger)
     {
-        base.OnMessage = async (activity, cancellationToken) =>
+        base.OnMessage = async (context, cancellationToken) =>
         {
-            if (activity.Text!.StartsWith("/token"))
+            if (context.Activity.Text!.StartsWith("/token"))
             {
-                IUserTokenClient.GetTokenStatusResult[] tokenStatus = await base.UserTokenClient.GetTokenStatusAsync(activity.From!.Id!, activity.ChannelId!, cancellationToken: cancellationToken);
-                await base.SendActivityAsync(activity.CreateReplyActivity($"Token status: HasToken={tokenStatus[0].HasToken}, ConnectionName={tokenStatus[0].ConnectionName}"), cancellationToken);
+                IUserTokenClient.GetTokenStatusResult[] tokenStatus = await base.UserTokenClient.GetTokenStatusAsync(context.Activity.From!.Id!, context.Activity.ChannelId!, cancellationToken: cancellationToken);
+                await context.SendActivityAsync($"Token status: HasToken={tokenStatus[0].HasToken}, ConnectionName={tokenStatus[0].ConnectionName}", cancellationToken);
                 if (tokenStatus[0].HasToken!.Value == true)
                 {
-                    IUserTokenClient.GetTokenResult? token = await base.UserTokenClient.GetTokenAsync(activity.From!.Id!, tokenStatus[0].ConnectionName!, activity.ChannelId!, cancellationToken: cancellationToken);
+                    IUserTokenClient.GetTokenResult? token = await base.UserTokenClient.GetTokenAsync(context.Activity.From!.Id!, tokenStatus[0].ConnectionName!, context.Activity.ChannelId!, cancellationToken: cancellationToken);
                     string res = PrintToken(token);
-                    await base.SendActivityAsync(activity.CreateReplyActivity(res), cancellationToken);
+                    await context.SendActivityAsync(res, cancellationToken);
                 }
                 else
                 {
-                    IUserTokenClient.GetSignInResourceResult signInResource = await base.UserTokenClient.GetTokenOrSignInResource(activity.From!.Id!, tokenStatus[0].ConnectionName!, activity.ChannelId!, cancellationToken: cancellationToken);
-                    await base.SendActivityAsync(activity.CreateReplyActivity($"Please sign in using this link: {signInResource.SignInResource!.SignInLink} and reply with /login `<6 digit code>`"), cancellationToken);
+                    IUserTokenClient.GetSignInResourceResult signInResource = await base.UserTokenClient.GetTokenOrSignInResource(context.Activity.From!.Id!, tokenStatus[0].ConnectionName!, context.Activity.ChannelId!, cancellationToken: cancellationToken);
+                    await context.SendActivityAsync($"Please sign in using this link: {signInResource.SignInResource!.SignInLink} and reply with /login `<6 digit code>`", cancellationToken);
                 }
             }
-            else if (activity.Text!.StartsWith("/login"))
+            else if (context.Activity.Text!.StartsWith("/login"))
             {
-                IUserTokenClient.GetTokenStatusResult[] tokenStatus = await base.UserTokenClient.GetTokenStatusAsync(activity.From!.Id!, activity.ChannelId!, cancellationToken: cancellationToken);
-                IUserTokenClient.GetTokenResult? token = await base.UserTokenClient.GetTokenAsync(activity.From!.Id!, tokenStatus[0].ConnectionName!, activity.ChannelId!, activity.Text[7..], cancellationToken);
+                IUserTokenClient.GetTokenStatusResult[] tokenStatus = await base.UserTokenClient.GetTokenStatusAsync(context.Activity.From!.Id!, context.Activity.ChannelId!, cancellationToken: cancellationToken);
+                IUserTokenClient.GetTokenResult? token = await base.UserTokenClient.GetTokenAsync(context.Activity.From!.Id!, tokenStatus[0].ConnectionName!, context.Activity.ChannelId!, context.Activity.Text[7..], cancellationToken);
                 string res = PrintToken(token);
-                await base.SendActivityAsync(activity.CreateReplyActivity(res), cancellationToken);
+                await context.SendActivityAsync(res, cancellationToken);
             }
-            else if (activity.Text.StartsWith("/logout"))
+            else if (context.Activity.Text.StartsWith("/logout"))
             {
-                IUserTokenClient.GetTokenStatusResult[] tokenStatus = await base.UserTokenClient.GetTokenStatusAsync(activity.From!.Id!, activity.ChannelId!, cancellationToken: cancellationToken);
-                bool logout = await base.UserTokenClient.SignOutUserAsync(activity.From!.Id!, tokenStatus[0].ConnectionName, cancellationToken: cancellationToken);
-                await base.SendActivityAsync(activity.CreateReplyActivity("logged out"), cancellationToken);
+                IUserTokenClient.GetTokenStatusResult[] tokenStatus = await base.UserTokenClient.GetTokenStatusAsync(context.Activity.From!.Id!, context.Activity.ChannelId!, cancellationToken: cancellationToken);
+                bool logout = await base.UserTokenClient.SignOutUserAsync(context.Activity.From!.Id!, tokenStatus[0].ConnectionName, cancellationToken: cancellationToken);
+                await context.SendActivityAsync("logged out", cancellationToken);
             }
             else
             {
-                Activity reply = activity.CreateReplyActivity($"you said {activity.Text}, with ❤️ at {DateTime.Now:T}");
-                await base.SendActivityAsync(reply, cancellationToken);
+                await context.SendActivityAsync($"you said {context.Activity.Text}, with ❤️ at {DateTime.Now:T}", cancellationToken);
             }
         };
     }

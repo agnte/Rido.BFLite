@@ -2,5 +2,5 @@
 
 namespace Rido.BFLite.Teams.Handlers
 {
-    public delegate Task MessageHandler(TeamsActivity activity, CancellationToken cancellationToken = default);
+    public delegate Task MessageHandler(Context context, CancellationToken cancellationToken = default);
 }

@@ -3,7 +3,7 @@
 namespace Rido.BFLite.Teams.Handlers;
 
 //public Func<InstallationUpdateWrapper, CancellationToken, Task>? OnInstallationUpdate { get; set; }
-public delegate Task InstallationUpdateHandler(InstallationUpdateArgs installationUpdateActivity, CancellationToken cancellationToken = default);
+public delegate Task InstallationUpdateHandler(InstallationUpdateArgs installationUpdateActivity, Context context, CancellationToken cancellationToken = default);
 
 public class InstallationUpdateArgs(TeamsActivity act)
 {
