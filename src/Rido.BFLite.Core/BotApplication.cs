@@ -48,7 +48,17 @@ public class BotApplication
 
     internal TurnMiddleware MiddleWare => _turnMiddleware;
 
-    public UserTokenClient UserTokenClient => _userTokenClient ?? throw new Exception("UserTokenClient not initialized");
+    public UserTokenClient UserTokenClient
+    {
+        get => _userTokenClient ?? throw new Exception("UserTokenClient not initialized");
+        set => _userTokenClient = value;
+    }
+
+    public ConversationClient ConversationClient
+    {
+        get => _conversationClient ?? throw new Exception("ConversationClient not initialized");
+        set => _conversationClient = value;
+    }
 
     public Func<Activity, CancellationToken, Task>? OnActivity { get; set; }
 

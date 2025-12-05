@@ -21,7 +21,7 @@ WebApplication webApp = webAppBuilder.Build();
 webApp.MapPost("/api/messages", async (IBotFrameworkHttpAdapter adapter, IBot bot, HttpRequest request, HttpResponse response) =>
     await adapter.ProcessAsync(request, response, bot));
 
-webApp.MapGet("/api/notify", async (HttpRequest request, HttpResponse response) =>
+webApp.MapGet("/api/notify", async (HttpContext httpContext) =>
 {
     IBotFrameworkHttpAdapter adapter = webApp.Services.GetRequiredService<IBotFrameworkHttpAdapter>();
     ConversationReference? convRef = webApp.Services.GetRequiredService<ConcurrentDictionary<string, ConversationReference>>().Values.FirstOrDefault();

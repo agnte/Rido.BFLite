@@ -1,8 +1,11 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.Bot.Builder;
 using Microsoft.Bot.Builder.Integration.AspNet.Core;
+using Microsoft.Bot.Connector.Authentication;
 using Microsoft.Bot.Schema;
+using Microsoft.Extensions.DependencyInjection;
 using Rido.BFLite.Core;
+using Rido.BFLite.Core.Hosting;
 
 namespace Rido.BFLite.Compat.Adapter;
 
@@ -56,6 +59,12 @@ public class CompatAdapter(BotApplication botApplication, CompatBotAdapter compa
 
     public async Task ContinueConversationAsync(string botId, ConversationReference reference, BotCallbackHandler callback, CancellationToken cancellationToken)
     {
+        HttpContext httpContext = new DefaultHttpContext();
+
+        botApplication.ConversationClient  = httpContext.RequestServices.GetKeyedService<ConversationClient>("AzureAd") ?? throw new Exception("ConversationClient not registered");
+
+        botApplication.UserTokenClient = httpContext.RequestServices.GetService<Core.UserTokenClient>() ?? throw new Exception("UserTokenClient not registered");
+
         TurnContext turnContext = new(compatBotAdapter, reference.GetContinuationActivity());
         await callback(turnContext, cancellationToken);
     }
