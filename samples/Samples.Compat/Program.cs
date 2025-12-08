@@ -2,16 +2,11 @@ using Microsoft.Bot.Builder;
 using Microsoft.Bot.Builder.Integration.AspNet.Core;
 using Microsoft.Bot.Schema;
 using Rido.BFLite.Compat.Adapter;
-using Rido.BFLite.Core;
-using Rido.BFLite.Core.Hosting;
-using Samples.Compat;
 using System.Collections.Concurrent;
 
 WebApplicationBuilder webAppBuilder = WebApplication.CreateBuilder(args);
-webAppBuilder.Services.AddBotApplication<BotApplication>();
+webAppBuilder.AddCompatAdapter();
 
-webAppBuilder.Services.AddSingleton<CompatBotAdapter>();
-webAppBuilder.Services.AddSingleton<IBotFrameworkHttpAdapter, CustomAdapter>();
 webAppBuilder.Services.AddSingleton<IBot, EchoBot>();
 
 webAppBuilder.Services.AddSingleton<ConcurrentDictionary<string, ConversationReference>>();
