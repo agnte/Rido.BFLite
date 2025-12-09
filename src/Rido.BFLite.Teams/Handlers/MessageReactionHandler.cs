@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace Rido.BFLite.Teams.Handlers;
 
-public delegate Task MessageReactionHandler(MessageReactionArgs reactionActivity, CancellationToken cancellationToken = default);
+public delegate Task MessageReactionHandler(MessageReactionArgs reactionActivity, Context context, CancellationToken cancellationToken = default);
 
 public class MessageReactionArgs(TeamsActivity act)
 {
