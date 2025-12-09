@@ -5,7 +5,7 @@ using System.Text.Json;
 namespace Rido.BFLite.Teams.Handlers
 {
     // public Func<ConversationUpdateActivityWrapper, CancellationToken, Task>? OnConversationUpdate { get; set; }
-    public delegate Task ConversationUpdateHandler(ConversationUpdateArgs conversationUpdateActivity, CancellationToken cancellationToken = default);
+    public delegate Task ConversationUpdateHandler(ConversationUpdateArgs conversationUpdateActivity, Context context, CancellationToken cancellationToken = default);
 
     public class ConversationUpdateArgs(TeamsActivity act)
     {
