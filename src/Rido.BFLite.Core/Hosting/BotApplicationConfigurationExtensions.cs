@@ -13,7 +13,7 @@ public static class BotApplicationConfigurationExtensions
 
     internal const string UserTokenHttpClientName = "BotFrameworkUserToken";
 
-    public static IServiceCollection AddBotApplication<TApp>(this IServiceCollection services) where TApp : BotApplication, new()
+    public static IServiceCollection AddBotApplication<TApp>(this IServiceCollection services) where TApp : BotApplication
     {
         services.AddBotAuthorization();
         services.AddBotApplicationClients();
@@ -21,7 +21,7 @@ public static class BotApplicationConfigurationExtensions
         return services;
     }
 
-    public static IServiceCollection AddBotApplication<TApp>(this IServiceCollection services, TApp app) where TApp : BotApplication, new()
+    public static IServiceCollection AddBotApplication<TApp>(this IServiceCollection services, TApp app) where TApp : BotApplication
     {
         services.AddBotApplicationClients();
         services.AddSingleton(app);
@@ -33,7 +33,7 @@ public static class BotApplicationConfigurationExtensions
         IConfiguration configuration = services.BuildServiceProvider().GetRequiredService<IConfiguration>();
         services
             .AddHttpClient()
-            .AddTokenAcquisition(false)
+            .AddTokenAcquisition(true)
             .AddInMemoryTokenCaches()
             .AddAgentIdentities();
 
@@ -41,30 +41,32 @@ public static class BotApplicationConfigurationExtensions
 
         string agentScope = configuration[$"{aadConfigSectionName}:AgentScope"] ?? "https://api.botframework.com/.default";
 
-        services.AddHttpClient(ConversationHttpClientName)
+        services.AddHttpClient<ConversationClient>(ConversationHttpClientName)
             .AddHttpMessageHandler(sp => new BotAuthenticationHandler(
                 sp.GetRequiredService<IAuthorizationHeaderProvider>(),
                 sp.GetRequiredService<ILogger<BotAuthenticationHandler>>(),
                 agentScope,
                 aadConfigSectionName));
 
-        services.AddHttpClient(UserTokenHttpClientName)
+        services.AddHttpClient<UserTokenClient>(UserTokenHttpClientName)
             .AddHttpMessageHandler(sp => new BotAuthenticationHandler(
                 sp.GetRequiredService<IAuthorizationHeaderProvider>(),
                 sp.GetRequiredService<ILogger<BotAuthenticationHandler>>(),
                 "https://api.botframework.com/.default",
                 aadConfigSectionName));
 
-        static ConversationClient ConversationClientFactory(IServiceProvider provider, object serviceKey) => new(
-            provider.GetRequiredService<IHttpClientFactory>().CreateClient(ConversationHttpClientName),
-            provider.GetService<ILogger<ConversationClient>>()!
-            );
+        //static ConversationClient ConversationClientFactory(IServiceProvider provider, object serviceKey) => new(
+        //    provider.GetRequiredService<IHttpClientFactory>().CreateClient(ConversationHttpClientName),
+        //    provider.GetService<ILogger<ConversationClient>>()!
+        //    );
 
-        services.AddKeyedScoped(aadConfigSectionName, ConversationClientFactory);
+        //services.AddSingleton(ConversationClientFactory);
 
-        services.AddScoped(sp => new UserTokenClient(
-            sp.GetRequiredService<ILogger<UserTokenClient>>(),
-            sp.GetRequiredService<IHttpClientFactory>().CreateClient(UserTokenHttpClientName)));
+        // services.AddSingleton<ConversationClient>();
+
+        //services.AddSingleton(sp => new UserTokenClient(
+        //    sp.GetRequiredService<ILogger<UserTokenClient>>(),
+        //    sp.GetRequiredService<IHttpClientFactory>().CreateClient(UserTokenHttpClientName)));
 
         return services;
     }

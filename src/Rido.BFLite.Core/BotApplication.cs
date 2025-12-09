@@ -24,39 +24,47 @@ public class BotApplication
 {
     private readonly ILogger<BotApplication> _logger;
     private readonly IConfiguration _configuration;
-    private ConversationClient? _conversationClient;
-    private UserTokenClient? _userTokenClient;
+    private readonly ConversationClient? _conversationClient;
+    private readonly UserTokenClient? _userTokenClient;
     private readonly string _serviceKey;
     private readonly TurnMiddleware _turnMiddleware;
 
-    public BotApplication()
-    {
-        _logger = NullLogger<BotApplication>.Instance;
-        _configuration = new ConfigurationBuilder().Build();
-        _serviceKey = "AzureAd";
-        _turnMiddleware = new TurnMiddleware();
-    }
+    //public BotApplication()
+    //{
+    //    _logger = NullLogger<BotApplication>.Instance;
+    //    _configuration = new ConfigurationBuilder().Build();
+    //    _serviceKey = "AzureAd";
+    //    _turnMiddleware = new TurnMiddleware();
+    //}
 
-    public BotApplication(IConfiguration config, ILogger<BotApplication> logger, string serviceKey = "AzureAd")
+    public BotApplication(ConversationClient conversationClient, UserTokenClient userTokenClient, IConfiguration config, ILogger<BotApplication> logger, string serviceKey = "AzureAd")
     {
         _logger = logger;
         _configuration = config;
         _serviceKey = serviceKey;
         _turnMiddleware = new TurnMiddleware();
+        _conversationClient = conversationClient;
+        _userTokenClient = userTokenClient;
         logger.LogInformation("Started bot listener on {port} for AppID:{appid}", config["ASPNETCORE_URLS"], config[$"{_serviceKey}:ClientId"]);
     }
 
     internal TurnMiddleware MiddleWare => _turnMiddleware;
 
-    public UserTokenClient UserTokenClient => _userTokenClient ?? throw new Exception("UserTokenClient not initialized");
+    public UserTokenClient UserTokenClient => _userTokenClient ?? throw new InvalidOperationException("UserTokenClient not initialized");
+    public ConversationClient ConversationClient => _conversationClient ?? throw new InvalidOperationException("ConversationClient not initialized");
 
     public Func<Activity, CancellationToken, Task>? OnActivity { get; set; }
 
     public async Task<Activity> ProcessAsync(HttpContext httpContext, CancellationToken cancellationToken = default)
     {
-        _conversationClient = httpContext.RequestServices.GetKeyedService<ConversationClient>(_serviceKey) ?? throw new Exception("ConversationClient not registered");
+        //_conversationClient = httpContext.RequestServices.GetKeyedService<ConversationClient>(_serviceKey) ?? throw new Exception("ConversationClient not registered");
 
-        _userTokenClient = httpContext.RequestServices.GetService<UserTokenClient>() ?? throw new Exception("UserTokenClient not registered");
+        //_userTokenClient = httpContext.RequestServices.GetService<UserTokenClient>() ?? throw new Exception("UserTokenClient not registered");
+
+        if (_userTokenClient is null || _conversationClient is null)
+        {
+            throw new InvalidOperationException("BotApplication not initialized with ConversationClient and UserTokenClient");
+        }
 
         Activity activity = await Activity.FromJsonStreamAsync(httpContext.Request.Body, cancellationToken) ?? throw new InvalidOperationException("Invalid Activity");
 
@@ -68,7 +76,7 @@ public class BotApplication
         AgenticIdentity? agenticIdentity = AgenticIdentity.FromProperties(activity.Recipient!.Properties!);
 
         _userTokenClient.AgenticIdentity = agenticIdentity;
-
+        _conversationClient.AgenticIdentity = agenticIdentity;
 
         using (_logger.BeginScope("Processing activity {Type} {Id}", activity.Type, activity.Id))
         {

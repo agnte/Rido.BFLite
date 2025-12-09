@@ -1,63 +1,17 @@
-﻿using Rido.BFLite.Core.Hosting;
-using Rido.BFLite.Core.Schema;
-using Rido.BFLite.Teams;
-using Rido.BFLite.Teams.Schema;
+﻿
+using Rido.BFLite.Core;
+using Rido.BFLite.Core.Hosting;
 
 WebApplicationBuilder webAppBuilder = WebApplication.CreateSlimBuilder(args);
-webAppBuilder.Services.AddBotApplication<TeamsBotApplication>();
+webAppBuilder.Services.AddBotApplication<BotApplication>();
 WebApplication webApp = webAppBuilder.Build();
-TeamsBotApplication botApp = webApp.UseBotApplication<TeamsBotApplication>();
+var botApp = webApp.UseBotApplication<BotApplication>();
 
-TeamsActivity? lastActivity = null;
 
-webApp.MapGet("api/notify", async (HttpContext httpContext) =>
+botApp.OnActivity = async (activity, cancellationToken) =>
 {
-    Activity activity = new()
-    {
-        Type = "message",
-        Conversation = new Conversation()
-        {
-            Id = lastActivity!.Conversation!.Id
-        },
-        From = lastActivity.Recipient,
-        Recipient = lastActivity.From,
-        ServiceUrl = lastActivity.ServiceUrl,
-        Text = "Proactive"
-    };
-
-    await botApp.SendActivityAsync(activity);
-
-    return Results.Ok("Notification endpoint is working");
-});
-
-botApp.OnMessage = async (context, cancellationToken) =>
-{
-    lastActivity = context.Activity;
-    await context.SendActivityAsync($"you said {context.Activity.Text}, with ❤️ at {DateTime.Now:T}", cancellationToken);
-};
-
-botApp.OnMessageReaction = async (reaction, context, cancellationToken) =>
-{
-    string result = @$"Reaction received at {DateTime.Now:T}. " +
-    $"                  Added: {reaction.ReactionsAdded?.FirstOrDefault()?.Type} " +
-    $"                  Removed: {reaction.ReactionsRemoved?.FirstOrDefault()?.Type}";
-
-    await context.SendActivityAsync(result, cancellationToken);
-};
-
-botApp.OnInstallationUpdate = async (installationUpdate, context, cancellationToken) =>
-{
-    await context.SendActivityAsync($"Installation update event. Action: {installationUpdate.Action} for {installationUpdate.SelectedChannelId} channel", cancellationToken);
-};
-
-botApp.OnConversationUpdate = async (conversationUpdate, context, cancellationToken) =>
-{
-    string result = " Members changed";
-    result += "\n\n Added: \n\n";
-    conversationUpdate.MembersAdded?.ToList().ForEach(ma => result += $" **{ma.Name}** \n");
-    result += "Removed: \n\n";
-    conversationUpdate.MembersRemoved?.ToList().ForEach(mr => result += $" {mr.Name}\n");
-    await context.SendActivityAsync(result, cancellationToken);
+    var replyActivity = activity.CreateReplyActivity("You said " + activity.Text);
+    await botApp.SendActivityAsync(replyActivity, cancellationToken);
 };
 
 webApp.Run();

@@ -10,7 +10,7 @@ public static class AppBuilderExtensions
         this IApplicationBuilder builder,
         string routePath = "api/messages",
         string authorizationPolicy = "DefaultPolicy")
-            where TApp : BotApplication, new()
+            where TApp : BotApplication
     {
         WebApplication? webApp = builder as WebApplication;
         TApp app = builder.ApplicationServices.GetService<TApp>() ?? throw new Exception("Application not registered");
@@ -31,7 +31,7 @@ public static class AppBuilderExtensions
         TApp app,
         string routePath = "api/messages",
         string authorizationPolicy = "DefaultPolicy")
-            where TApp : BotApplication, new()
+            where TApp : BotApplication
     {
         WebApplication? webApp = builder as WebApplication;
         //TApp app = builder.ApplicationServices.GetService<TApp>() ?? throw new Exception("Application not registered");

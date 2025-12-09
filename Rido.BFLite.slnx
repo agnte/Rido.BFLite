@@ -13,6 +13,7 @@
     <Project Path="test/Rido.BFLite.Core.Tests/Rido.BFLite.Core.Tests.csproj" Id="deb30ad4-8247-4b80-b764-b8409e7dde31" />
     <Project Path="test/Rido.BFLite.Teams.Tests/Rido.BFLite.Teams.Tests.csproj" />
   </Folder>
+  <Project Path="samples/Samples.AllInOne/Samples.AllInOne.csproj" Id="0ab36d07-9583-4040-abac-c7f2c29e5446" />
   <Project Path="samples/Samples.BotEcho/Samples.EchoBot.csproj" />
   <Project Path="samples/Samples.Compat/Samples.Compat.csproj" Id="ca1d3c5a-7b7b-4a48-ac52-e71904b381ae" />
   <Project Path="samples/Samples.Middleware/Samples.Middleware.csproj" Id="0cdaa541-71db-4166-908d-9824ed8f8fc1" />

@@ -7,6 +7,7 @@ namespace Rido.BFLite.Core;
 
 public class ConversationClient(HttpClient httpClient, ILogger<ConversationClient> logger)
 {
+    internal AgenticIdentity? AgenticIdentity { get; set; }
     public async Task<string> SendActivityAsync(Activity activity, CancellationToken cancellationToken = default)
     {
 

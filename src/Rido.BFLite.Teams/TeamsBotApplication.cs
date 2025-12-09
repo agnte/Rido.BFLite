@@ -13,12 +13,12 @@ public class TeamsBotApplication : BotApplication
     public InstallationUpdateHandler? OnInstallationUpdate { get; set; }
     public ConversationUpdateHandler? OnConversationUpdate { get; set; }
 
-    public TeamsBotApplication()
-    {
-    }
+    //public TeamsBotApplication()
+    //{
+    //}
 
-    public TeamsBotApplication(IConfiguration config, ILogger<BotApplication> logger, string serviceKey = "AzureAd")
-        : base(config, logger, serviceKey)
+    public TeamsBotApplication(ConversationClient conversationClient, UserTokenClient userTokenClient, IConfiguration config, ILogger<BotApplication> logger, string serviceKey = "AzureAd")
+        : base(conversationClient, userTokenClient, config, logger, serviceKey)
     {
         OnActivity = async (activity, cancellationToken) =>
         {
