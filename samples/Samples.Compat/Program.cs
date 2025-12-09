@@ -5,8 +5,7 @@ using Rido.BFLite.Compat.Adapter;
 using System.Collections.Concurrent;
 
 WebApplicationBuilder webAppBuilder = WebApplication.CreateBuilder(args);
-webAppBuilder.AddCompatAdapter();
-
+webAppBuilder.Services.AddCompatAdapter();
 webAppBuilder.Services.AddSingleton<IBot, EchoBot>();
 
 webAppBuilder.Services.AddSingleton<ConcurrentDictionary<string, ConversationReference>>();
