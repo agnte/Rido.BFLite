@@ -10,9 +10,15 @@ public static class CompatHostingExtensions
 {
     public static IHostApplicationBuilder AddCompatAdapter(this IHostApplicationBuilder builder)
     {
-        builder.Services.AddBotApplication<BotApplication>();
-        builder.Services.AddSingleton<CompatBotAdapter>();
-        builder.Services.AddSingleton<IBotFrameworkHttpAdapter, CompatAdapter>();
+        builder.Services.AddCompatAdapter();
         return builder;
+    }
+
+    public static IServiceCollection AddCompatAdapter(this IServiceCollection services)
+    {
+        services.AddBotApplication<BotApplication>();
+        services.AddSingleton<CompatBotAdapter>();
+        services.AddSingleton<IBotFrameworkHttpAdapter, CompatAdapter>();
+        return services;
     }
 }
