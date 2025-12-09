@@ -12,22 +12,22 @@ class EchoBot(ConcurrentDictionary<string, ConversationReference> conversationRe
 
         if (turnContext.Activity.Text == "fail")
         {
-            throw new Exception("Test exception");  
+            throw new Exception("Test exception");
         }
 
-        var convRef = turnContext.Activity.GetConversationReference();
+        ConversationReference convRef = turnContext.Activity.GetConversationReference();
         conversationReferences.AddOrUpdate(convRef.User.Id, convRef, (k, v) => convRef);
-        var replyText = $"Echo: {turnContext.Activity.Text}";
+        string replyText = $"Echo: {turnContext.Activity.Text}";
         await turnContext.SendActivityAsync(MessageFactory.Text(replyText, replyText), cancellationToken);
 
 
-        var members = await TeamsInfo.GetMembersAsync(turnContext)!;
+        IEnumerable<TeamsChannelAccount> members = await TeamsInfo.GetMembersAsync(turnContext, cancellationToken)!;
 
-        await turnContext.SendActivityAsync("members " + string.Join(", ", members.ToList().Select(m => m.Name)));
+        await turnContext.SendActivityAsync("members " + string.Join(", ", members.ToList().Select(m => m.Name)), cancellationToken: cancellationToken);
 
 
         UserTokenClient userTokenClient = turnContext.TurnState.Get<UserTokenClient>();
-        var tokenResponse = await userTokenClient.GetTokenStatusAsync(turnContext.Activity.From.Id, turnContext.Activity.ChannelId, null, cancellationToken);
+        TokenStatus[] tokenResponse = await userTokenClient.GetTokenStatusAsync(turnContext.Activity.From.Id, turnContext.Activity.ChannelId, null, cancellationToken);
         await turnContext.SendActivityAsync(MessageFactory.Text($"Token Status: {string.Join(", ", tokenResponse.Select(t => t.ConnectionName + ": " + (t!.HasToken!.Value ? "Has Token" : "No Token")))}"), cancellationToken);
     }
 }
