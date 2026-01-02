@@ -2,6 +2,7 @@
 using Rido.BFLite.Core.Hosting;
 using Rido.BFLite.Core.Schema;
 using System.Text;
+using System.Text.Json;
 
 namespace Rido.BFLite.Core;
 
@@ -48,5 +49,18 @@ public class ConversationClient(HttpClient httpClient, ILogger<ConversationClien
         return resp.IsSuccessStatusCode ?
             respContent :
             throw new Exception($"Error sending activity: {resp.StatusCode} - {respContent}");
+    }
+
+    public async Task<ResourceResponse> SendActivityWithResponseAsync(Activity activity, CancellationToken cancellationToken = default)
+    {
+        string responseContent = await SendActivityAsync(activity, cancellationToken).ConfigureAwait(false);
+        
+        if (string.IsNullOrEmpty(responseContent))
+        {
+            return new ResourceResponse();
+        }
+
+        return JsonSerializer.Deserialize<ResourceResponse>(responseContent, Activity.DefaultJsonOptions) 
+            ?? new ResourceResponse();
     }
 }

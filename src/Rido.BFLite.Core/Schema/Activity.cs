@@ -24,7 +24,8 @@ public class Activity<TChannelData>(string type = "message") where TChannelData 
     [JsonPropertyName("from")] public ConversationAccount? From { get; set; }
     [JsonPropertyName("recipient")] public ConversationAccount? Recipient { get; set; }
     [JsonPropertyName("conversation")] public Conversation? Conversation { get; set; }
-    [JsonPropertyName("entities")] public JsonArray? Entities { get; set; }
+    [JsonPropertyName("entities")] public List<Entity>? Entities { get; set; }
+    [JsonPropertyName("attachments")] public List<Attachment>? Attachments { get; set; }
     [JsonExtensionData] public ExtendedPropertiesDictionary Properties { get; set; } = [];
 
     public readonly static JsonSerializerOptions DefaultJsonOptions = new()
