@@ -70,12 +70,6 @@ func (t *TeamsBotApplication) dispatchActivity(ctx context.Context, activity *sc
 	// Convert to TeamsActivity
 	teamsActivity := teamsschema.FromActivity(activity)
 
-	// Create handler context
-	handlerCtx := &Context{
-		Activity:       teamsActivity,
-		BotApplication: t,
-	}
-
 	// Create the generic context for handlers package
 	genericCtx := handlers.NewContext(teamsActivity, t.bot)
 
@@ -107,7 +101,6 @@ func (t *TeamsBotApplication) dispatchActivity(ctx context.Context, activity *sc
 	}
 
 	// No handler registered for this activity type, ignore
-	_ = handlerCtx // Use to prevent unused variable warning
 	return nil
 }
 

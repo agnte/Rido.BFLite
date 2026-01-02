@@ -11,6 +11,9 @@ import (
 	"github.com/agnte/Rido.BFLite/go/bflite/schema"
 )
 
+// DefaultBotEndpointPath is the default path for the bot endpoint.
+const DefaultBotEndpointPath = "/api/messages"
+
 // BotHandlerError wraps handler exceptions with the activity that caused the error.
 // FR-010: System MUST wrap handler exceptions in BotHandlerException.
 type BotHandlerError struct {
@@ -179,7 +182,7 @@ func (b *BotApplication) HTTPHandler() http.Handler {
 // Listen starts the HTTP server on the specified address.
 func (b *BotApplication) Listen(addr string, path string) error {
 	if path == "" {
-		path = "/api/messages"
+		path = DefaultBotEndpointPath
 	}
 	b.logger.Printf("Bot listening on %s%s", addr, path)
 	http.Handle(path, b.HTTPHandler())

@@ -12,6 +12,9 @@ import (
 	"time"
 )
 
+// tokenRefreshBufferSeconds is the number of seconds before token expiry to refresh.
+const tokenRefreshBufferSeconds = 300 // 5 minutes
+
 // tokenCache stores cached OAuth tokens.
 type tokenCache struct {
 	mu        sync.RWMutex
@@ -56,9 +59,9 @@ func createTokenFunc(config Config) func(ctx context.Context) (string, error) {
 			return "", err
 		}
 
-		// Cache token with buffer (refresh 5 minutes before expiry)
+		// Cache token with buffer (refresh before expiry)
 		cachedToken.token = token
-		cachedToken.expiresAt = time.Now().Add(time.Duration(expiresIn-300) * time.Second)
+		cachedToken.expiresAt = time.Now().Add(time.Duration(expiresIn-tokenRefreshBufferSeconds) * time.Second)
 
 		return token, nil
 	}

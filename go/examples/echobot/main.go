@@ -29,20 +29,12 @@ func main() {
 		bot.SetDebugLogging(true)
 	}
 
-	// Store last activity for proactive messaging demo
-	var lastActivity *teams.Context
-
 	// Set up message handler
 	// User Story 1 - Echo Bot: Bot receives message and responds with echo
 	bot.OnMessage = func(ctx context.Context, c *handlers.Context) error {
 		text := c.Activity.Text
 		response := fmt.Sprintf("You said: %s, with ❤️ at %s", text, time.Now().Format("15:04:05"))
 		_, err := c.SendActivity(ctx, response)
-		
-		// Store for proactive messaging
-		lastActivity = &teams.Context{Activity: c.Activity}
-		_ = lastActivity // Prevent unused variable warning
-		
 		return err
 	}
 
