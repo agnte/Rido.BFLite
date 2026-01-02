@@ -163,6 +163,18 @@ dotnet build
 dotnet test
 ```
 
+## Language Translation
+
+This project includes a comprehensive specification for translating the library to other programming languages using LLMs. See [specs/TRANSLATION_SPEC.md](specs/TRANSLATION_SPEC.md) for:
+
+- Complete API surface documentation
+- User scenarios with acceptance criteria
+- Functional requirements
+- Entity definitions and relationships
+- Sample implementations in Python and TypeScript
+
+The spec follows the [spec-kit](https://github.com/github/spec-kit) LLM prompt patterns for spec-driven development.
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit issues and pull requests.
