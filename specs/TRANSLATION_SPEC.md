@@ -399,46 +399,51 @@ interface ITurnMiddleware:
 
 ---
 
-## Hosting Integration
+## Application Setup
 
-### Service Registration
+The bot application requires several components to be wired together. The implementation approach varies by language/platform - use whatever pattern is idiomatic (factory functions, constructors, DI containers, or simple instantiation).
 
-```text
-# Register bot services
-services.AddBotApplication<TeamsBotApplication>()
-    # Registers:
-    # - TeamsBotApplication as singleton
-    # - ConversationClient as keyed scoped service
-    # - UserTokenClient as scoped
-    # - HttpClient with authentication handler
-    # - JWT authentication with Bot Framework validation
-```
-
-### Application Configuration
+### Required Components
 
 ```text
-# Configure bot endpoint
-app.UseBotApplication<TeamsBotApplication>(
-    routePath: "api/messages",        # HTTP endpoint path
-    authorizationPolicy: "DefaultPolicy"  # Authorization policy name
-)
-    # Sets up:
-    # - Authentication middleware
-    # - Authorization middleware
-    # - POST endpoint with JWT protection
+Bot Application Setup:
+    1. Create BotApplication instance
+    2. Configure authentication (client credentials for outbound, JWT validation for inbound)
+    3. Set up HTTP endpoint for receiving activities
+    4. Wire ConversationClient for sending activities
+    5. Register activity handlers
+
+Components to wire:
+    - BotApplication: Main entry point
+    - ConversationClient: HTTP client for Bot Framework API
+    - UserTokenClient: OAuth token management (optional, for user auth flows)
+    - Authentication: JWT validation + token acquisition
 ```
 
-### Configuration Settings
+### HTTP Endpoint Setup
 
-```json
-{
-  "AzureAd": {
-    "ClientId": "bot-app-id",
-    "ClientSecret": "bot-app-secret",
-    "TenantId": "tenant-id-or-common"
-  },
-  "ASPNETCORE_URLS": "https://localhost:5001"
-}
+```text
+# Bot must expose POST endpoint (default: /api/messages)
+# Endpoint must:
+#   - Accept JSON body (Activity)
+#   - Validate JWT token from Authorization header
+#   - Return activity ID on success
+#   - Return 401 for invalid/missing tokens
+```
+
+### Configuration
+
+Configuration can be provided via environment variables, config files, or constructor parameters:
+
+```text
+Required settings:
+    ClientId: "bot-app-id"           # Azure AD application ID
+    ClientSecret: "bot-app-secret"   # Azure AD client secret
+    TenantId: "tenant-id"            # Azure AD tenant (or "common")
+    
+Optional settings:
+    ListenUrl: "https://localhost:5001"
+    EndpointPath: "/api/messages"
 ```
 
 ---
@@ -494,13 +499,16 @@ A translated echo bot example MUST produce identical behavior to the C# sample w
 - TypeScript: Use `Promise<T>` with `async/await`
 - Java: Use `CompletableFuture<T>` or reactive patterns
 
-### Dependency Injection
+### Component Wiring
 
-- C# uses Microsoft.Extensions.DependencyInjection
-- Python: Use `dependency-injector` or similar
-- Go: Use constructor injection or wire
-- TypeScript: Use `tsyringe` or similar
-- Adapt patterns to target language conventions
+Use whatever approach is idiomatic for the target language:
+
+- **Simple instantiation**: Pass dependencies via constructors
+- **Factory functions**: Create components with `create_bot()` style functions
+- **DI containers**: Use if the platform/framework encourages it
+- **Global/module-level**: Acceptable for simple applications
+
+The key requirement is that components can access their dependencies (e.g., BotApplication needs ConversationClient to send messages).
 
 ### JWT Validation
 
@@ -518,44 +526,41 @@ A translated echo bot example MUST produce identical behavior to the C# sample w
 
 ## Sample: Echo Bot (Reference Implementation)
 
+The echo bot demonstrates the minimal implementation. Each language should adapt the setup pattern to be idiomatic.
+
+### C# (Source Reference)
+
 ```csharp
 using Rido.BFLite.Core.Hosting;
 using Rido.BFLite.Teams;
 
-// 1. Create web application builder
 var builder = WebApplication.CreateSlimBuilder(args);
-
-// 2. Register bot services (includes auth setup)
 builder.Services.AddBotApplication<TeamsBotApplication>();
-
-// 3. Build the application
 var app = builder.Build();
 
-// 4. Configure bot endpoint and get bot instance
 var bot = app.UseBotApplication<TeamsBotApplication>();
 
-// 5. Set up message handler
 bot.OnMessage = async (context, cancellationToken) =>
 {
-    // Create and send reply
     await context.SendActivityAsync(
         $"You said: {context.Activity.Text}",
         cancellationToken
     );
 };
 
-// 6. Run the application
 app.Run();
 ```
 
-### Equivalent Python (Target)
+### Python (Target Example)
 
 ```python
-from bflite import TeamsBotApplication, create_app
+from bflite import TeamsBotApplication
 
-# Create and configure app
-app = create_app()
-bot = TeamsBotApplication(app)
+# Create bot with configuration
+bot = TeamsBotApplication(
+    client_id="your-app-id",
+    client_secret="your-app-secret"
+)
 
 # Set up message handler
 @bot.on_message
@@ -564,17 +569,19 @@ async def handle_message(context):
 
 # Run the application
 if __name__ == "__main__":
-    app.run()
+    bot.run(port=3978)
 ```
 
-### Equivalent TypeScript (Target)
+### TypeScript (Target Example)
 
 ```typescript
-import { TeamsBotApplication, createApp } from 'bflite';
+import { TeamsBotApplication } from 'bflite';
 
-// Create and configure app
-const app = createApp();
-const bot = new TeamsBotApplication(app);
+// Create bot with configuration
+const bot = new TeamsBotApplication({
+    clientId: 'your-app-id',
+    clientSecret: 'your-app-secret'
+});
 
 // Set up message handler
 bot.onMessage = async (context) => {
@@ -582,7 +589,31 @@ bot.onMessage = async (context) => {
 };
 
 // Run the application
-app.listen(3978);
+bot.listen(3978);
+```
+
+### Go (Target Example)
+
+```go
+package main
+
+import (
+    "fmt"
+    "github.com/example/bflite"
+)
+
+func main() {
+    bot := bflite.NewTeamsBotApplication(bflite.Config{
+        ClientID:     "your-app-id",
+        ClientSecret: "your-app-secret",
+    })
+
+    bot.OnMessage(func(ctx *bflite.Context) error {
+        return ctx.SendActivity(fmt.Sprintf("You said: %s", ctx.Activity.Text))
+    })
+
+    bot.Listen(":3978")
+}
 ```
 
 ---
