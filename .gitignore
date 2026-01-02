@@ -8,3 +8,6 @@ appsettings.Development.json
 *.user
 
 _nupkgs/
+
+# Go build artifacts
+go/examples/echobot/echobot
