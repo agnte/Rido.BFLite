@@ -491,6 +491,23 @@ A translated echo bot example MUST produce identical behavior to the C# sample w
 - Implement retry logic for transient failures
 - Handle token refresh for long-running operations
 
+### Web Server Framework
+
+The bot needs an HTTP server to receive incoming activities. Use idiomatic web frameworks for each language:
+
+- **C#/.NET**: ASP.NET Core (built-in), Kestrel
+- **Python**: FastAPI, Flask, aiohttp
+- **TypeScript/Node.js**: Express, Koa, Fastify, or native `http` module
+- **Go**: Standard `net/http`, Gin, Echo, or Chi
+- **Java**: Spring Boot, Vert.x, or Javalin
+- **Rust**: Actix-web, Axum, or Rocket
+
+The web server must:
+- Accept POST requests at the bot endpoint (default: `/api/messages`)
+- Parse JSON request body as Activity
+- Support HTTPS (required for production)
+- Handle authentication middleware for JWT validation
+
 ### Async/Await Patterns
 
 - C# uses `async/await` with `Task<T>`
