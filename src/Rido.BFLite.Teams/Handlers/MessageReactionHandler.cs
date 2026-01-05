@@ -27,6 +27,19 @@ public class MessageReactionArgs(TeamsActivity act)
 
 public class MessageReaction
 {
+    /// <summary>
+    /// Known reactions are <see cref="KnownReactions"/>."/>
+    /// </summary>
     [JsonPropertyName("type")]
     public string? Type { get; set; }
+}
+
+public class KnownReactions
+{
+    public const string Like = "like";
+    public const string Heart = "heart";
+    public const string Laugh = "laugh";
+    public const string Surprised = "surprised";
+    public const string Sad = "sad";
+    public const string Angry = "angry";
 }
